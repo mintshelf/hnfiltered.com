@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#MISE description="Check repository conventions"
+set -euo pipefail
+
+for path in README.md CONTRIBUTING.md BIBLIOGRAPHY.md SECURITY.md .github/CODEOWNERS mise.toml; do
+  test -f "$path" || {
+    echo "Missing required repository file: $path" >&2
+    exit 1
+  }
+done
+
+git diff --check
