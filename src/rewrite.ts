@@ -128,7 +128,10 @@ class HeadHandler implements HTMLRewriterElementContentHandlers {
         .hnfiltered-brand svg{display:block;flex:none;width:24px;height:24px}
         @media(max-width:700px){
           .hnfiltered-wordmark{margin-right:5px;padding-top:1px;padding-right:4px}
-          .hnfiltered-status{position:relative;top:2px;margin-top:2px;line-height:1.35}
+          .pagetop{line-height:1.35}
+          .hnfiltered-status{position:static;top:auto;margin-top:0;line-height:inherit;vertical-align:baseline}
+          .hnfiltered-count{padding-top:0;padding-bottom:0;line-height:inherit;vertical-align:baseline}
+          .hnfiltered-why-toggle{vertical-align:baseline}
           .hnfiltered-why-panel{top:62px;right:12px;left:12px;width:auto;transform:none}
           .hnfiltered-popover-credit{justify-content:center}
           .hnfiltered-popover-brand{font-size:10pt}
