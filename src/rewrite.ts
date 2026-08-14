@@ -3,6 +3,15 @@ import type { Env, FilterManifest } from "./types";
 const HN_HOME = "https://news.ycombinator.com/";
 const CACHE_KEY = new Request("https://hnfiltered.invalid/cache/hn-home");
 
+const MINT_SHELF_MARK = `<svg aria-hidden="true" viewBox="0 0 64 64" width="24" height="24">
+  <g fill="#22c55e" transform="translate(32 0) scale(1.0573 1) translate(-32 0) translate(5.5 4) scale(.2994652406) translate(-27 -28)">
+    <path d="M31.25 27.807 27 28.115l.008 25.692c.004 14.131.471 28.554 1.039 32.052 1.579 9.734 5.938 18.286 12.833 25.181 7.003 7.003 15.335 11.315 24.967 12.922 3.734.622 14.771.984 25.153.824l18.5-.286.288-27c.301-28.29-.423-36.595-3.871-44.41-4.76-10.787-15.676-20.563-26.295-23.548-3.438-.967-11.534-1.539-24.622-1.741-10.725-.166-21.413-.163-23.75.006Z"/>
+    <path d="M178 28c-24.05.491-24.606.55-30.281 3.209-3.18 1.49-8.405 5.211-11.611 8.27-7.012 6.688-11.585 15.812-13.051 26.038-.985 6.877-1.031 38.005-.057 38.651.275.183 10.175.095 22-.194 19.111-.467 22.111-.771 27-2.734 10.196-4.095 20.852-14.826 26.317-26.5C202.351 66.124 204 56.51 204 41.612c0-7.422-.338-13.633-.75-13.803-.412-.17-11.775-.084-25.25.191Z"/>
+    <path d="M122.675 119.405c-1.007 2.623-.743 49.065.322 56.6.592 4.196 2.345 10.25 3.982 13.754 5.743 12.293 17.871 21.803 30.907 24.236 2.963.553 14.579 1.005 25.814 1.005h20.427l-.314-31.75-.313-31.75-3.215-6.788c-3.793-8.007-12.214-17.267-19.123-21.027-8.389-4.566-15.643-5.654-37.805-5.67-16.384-.012-20.244.247-20.682 1.39Z"/>
+    <path d="M70.293 139.136c-2.863.349-8.194 2.033-11.845 3.742-8.92 4.174-18.947 14.191-23.748 23.725-5.394 10.711-6.868 17.805-7.046 33.897l-.154 14h24.5c21.011 0 25.234-.256 29.656-1.799 7.746-2.703 15.6-8.834 20.265-15.821 6.726-10.072 7.579-14.316 7.579-37.719v-20.339l-17-.161c-9.35-.089-19.343.125-22.207.475Z"/>
+  </g>
+</svg>`;
+
 function escapeAttribute(value: string): string {
   return value.replace(/[&"<>]/g, (character) => {
     return { "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" }[
@@ -39,17 +48,60 @@ class HeadHandler implements HTMLRewriterElementContentHandlers {
     element.prepend('<base href="https://news.ycombinator.com/">', {
       html: true,
     });
-    if (this.hiddenIds.length === 0) return;
+    const selectors = this.hiddenIds.length
+      ? this.hiddenIds
+          .flatMap((id) => {
+            const story = `tr.athing[id="${id}"]`;
+            return [story, `${story} + tr`, `${story} + tr + tr`];
+          })
+          .join(",") + "{display:none!important}"
+      : "";
+    element.append(
+      `<style>
+        ${selectors}
+        .hnfiltered-wordmark{display:inline-block;margin:0 7px 0 4px;color:#6541c2;font-family:"Bradley Hand","Comic Sans MS",cursive;font-size:11px;font-weight:700;letter-spacing:.02em;line-height:1;transform:rotate(-3deg);transform-origin:center}
+        .hnfiltered-status{display:inline-block;position:relative;white-space:nowrap}
+        .hnfiltered-why{display:inline}
+        .hnfiltered-why summary{display:inline;cursor:pointer;list-style:none}
+        .hnfiltered-why summary::-webkit-details-marker{display:none}
+        .hnfiltered-why-panel{position:absolute;z-index:10;top:calc(100% + 7px);right:0;box-sizing:border-box;width:360px;padding:10px 12px;border:1px solid #ff6600;background:#f6f6ef;box-shadow:0 3px 10px rgba(0,0,0,.16);color:#3c3c3c;font-size:10px;font-weight:normal;line-height:1.45;white-space:normal}
+        .hnfiltered-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:18px;margin:8px 16px 0;color:#828282;font-size:8pt;line-height:1.45}
+        .hnfiltered-quote{text-align:center}
+        .hnfiltered-credit{display:inline-flex;align-items:center;gap:7px;color:#1a1c19!important;font-family:"Public Sans",system-ui,sans-serif;font-size:9pt;font-weight:650;letter-spacing:-.01em;text-decoration:none!important;white-space:nowrap}
+        .hnfiltered-credit svg{display:block;flex:none;width:24px;height:24px}
+        @media(max-width:700px){
+          .hnfiltered-wordmark{margin-right:4px;font-size:9px}
+          .hnfiltered-status{font-size:9px}
+          .hnfiltered-why-panel{position:fixed;top:34px;right:12px;left:12px;width:auto}
+          .hnfiltered-footer{grid-template-columns:1fr;justify-items:center;gap:8px;margin:8px 12px 0}
+          .hnfiltered-credit{font-size:8.5pt}
+        }
+      </style>`,
+      { html: true },
+    );
+  }
+}
 
-    const selectors = this.hiddenIds
-      .flatMap((id) => {
-        const story = `tr.athing[id="${id}"]`;
-        return [story, `${story} + tr`, `${story} + tr + tr`];
-      })
-      .join(",");
-    element.append(`<style>${selectors}{display:none!important}</style>`, {
+class NameHandler implements HTMLRewriterElementContentHandlers {
+  element(element: Element): void {
+    element.after('<span class="hnfiltered-wordmark">filtered</span>', {
       html: true,
     });
+  }
+}
+
+class NavigationHandler implements HTMLRewriterElementContentHandlers {
+  private handled = false;
+
+  constructor(private readonly filteredCount: number) {}
+
+  element(element: Element): void {
+    if (this.handled) return;
+    this.handled = true;
+    element.append(
+      `<span class="hnfiltered-status">&nbsp;| ${this.filteredCount} filtered | <details class="hnfiltered-why"><summary>why?</summary><span class="hnfiltered-why-panel">Hacker News, unchanged, minus stories whose discussion provides strong evidence that clicking the link will be a waste of time.</span></details></span>`,
+      { html: true },
+    );
   }
 }
 
@@ -71,16 +123,21 @@ class FooterHandler implements HTMLRewriterElementContentHandlers {
       this.manifest.mode === "shadow" && this.manifest.predictedIds.length > 0
         ? ` data-shadow-count="${this.manifest.predictedIds.length}"`
         : "";
+    const filterLine =
+      count > 0
+        ? `<span style="display:block;margin-top:2px">${countText}${showLink}</span>`
+        : "";
 
     element.after(
-      `<div class="hnfiltered-note"${shadowText} style="color:#828282;font-size:8pt;line-height:1.5;margin-top:6px">
-        <span>${countText}</span>${showLink}
-        &nbsp;|&nbsp;
-        <details style="display:inline">
-          <summary style="cursor:pointer;display:inline">why?</summary>
-          <span style="display:block;margin:4px auto 0;max-width:620px">Hacker News, unchanged, minus stories whose discussion provides strong evidence that clicking the link will be a waste of time.</span>
-        </details>
-        <span style="display:block;margin-top:2px"><a href="https://mintshelf.com/" rel="noopener noreferrer">an experiment by Mint Shelf</a></span>
+      `<div class="hnfiltered-footer"${shadowText}>
+        <div class="hnfiltered-quote" id="hnfiltered-why">
+          <span>Hacker News, unchanged, minus stories whose discussion provides strong evidence that clicking the link will be a waste of time.</span>
+          ${filterLine}
+        </div>
+        <a class="hnfiltered-credit" href="https://mintshelf.com/" rel="noopener noreferrer">
+          ${MINT_SHELF_MARK}
+          <span>An experiment by Mint Shelf</span>
+        </a>
       </div>`,
       { html: true },
     );
@@ -98,6 +155,8 @@ export async function renderHomepage(
   const upstream = await getHomepage();
   const transformed = new HTMLRewriter()
     .on("head", new HeadHandler(hiddenIds))
+    .on(".hnname", new NameHandler())
+    .on(".pagetop", new NavigationHandler(manifest.activeIds.length))
     .on(
       ".yclinks",
       new FooterHandler(manifest, requestUrl.origin + "/", showAll),
