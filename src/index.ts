@@ -1,9 +1,7 @@
 import { readManifest, runAnalysis } from "./analysis";
 import { renderHomepage } from "./rewrite";
+import { TAGLINE } from "./site";
 import type { Env } from "./types";
-
-const DESCRIPTION =
-  "Hacker News, unchanged, minus stories whose discussion provides strong evidence that clicking the link will be a waste of time.";
 
 function textResponse(body: string, contentType: string): Response {
   return new Response(body, {
@@ -43,7 +41,7 @@ export default {
 
     if (url.pathname === "/llms.txt") {
       return textResponse(
-        `# HNFiltered\n\n> ${DESCRIPTION}\n\nHNFiltered is a lightweight, independent Hacker News front page that uses discussion context to omit stories with strong evidence of being a poor use of the reader's time. Popular, controversial, and merely unpopular stories are deliberately protected from filtering.\n\nAn experiment by Mint Shelf.\n\n- Homepage: https://hnfiltered.com/\n- Creator: https://mintshelf.com/\n`,
+        `# HNFiltered\n\n> ${TAGLINE}\n\nHNFiltered removes stories when their Hacker News discussion suggests the link is not worth opening. Popular, controversial, and merely unpopular stories are protected from ordinary negative sentiment.\n\nAn experiment by Mint Shelf.\n\n- Homepage: https://hnfiltered.com/\n- Creator: https://mintshelf.com/\n`,
         "text/markdown; charset=utf-8",
       );
     }

@@ -4,7 +4,7 @@ import {
   type StoryForAssessment,
 } from "./types";
 
-const SYSTEM_PROMPT = `You assess whether discussion on Hacker News provides strong evidence that opening the submitted link would waste a reader's time.
+const SYSTEM_PROMPT = `You assess whether discussion on Hacker News suggests that opening the submitted link would waste a reader's time.
 
 Judge failure of the linked artifact itself. Relevant failures include a materially misleading title, unsupported or fabricated claims, thin or generic filler, spam or bait, copied material, a broken or inaccessible link, or a project that does not function as represented.
 

@@ -1,3 +1,4 @@
+import { TAGLINE } from "./site";
 import type {
   Env,
   FilteredStorySummary,
@@ -8,11 +9,19 @@ import type {
 const HN_HOME = "https://news.ycombinator.com/";
 const FILTERED_HOME = "https://hnfiltered.com/";
 const CACHE_KEY = new Request("https://hnfiltered.invalid/cache/hn-home");
-const SEO_DESCRIPTION =
-  "Hacker News, unchanged, minus stories whose discussion provides strong evidence that clicking the link will be a waste of time.";
 const SEO_TITLE = "HNFiltered | A more useful Hacker News front page";
-const SEO_JSON_LD =
-  '{"@context":"https://schema.org","@type":"WebSite","name":"HNFiltered","url":"https://hnfiltered.com/","description":"Hacker News, unchanged, minus stories whose discussion provides strong evidence that clicking the link will be a waste of time.","creator":{"@type":"Organization","name":"Mint Shelf","url":"https://mintshelf.com/"}}';
+const SEO_JSON_LD = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "HNFiltered",
+  url: FILTERED_HOME,
+  description: TAGLINE,
+  creator: {
+    "@type": "Organization",
+    name: "Mint Shelf",
+    url: "https://mintshelf.com/",
+  },
+});
 const DISMISS_SCRIPT = `document.addEventListener("focusin",e=>document.querySelectorAll("[popover]:popover-open").forEach(p=>{const b=document.querySelector('[popovertarget="'+p.id+'"]');!p.contains(e.target)&&!b?.contains(e.target)&&p.hidePopover()}));`;
 
 const FAILURE_MODE_LABELS = {
@@ -144,7 +153,7 @@ class HeadHandler implements HTMLRewriterElementContentHandlers {
     );
     element.append(`<script>${DISMISS_SCRIPT}</script>`, { html: true });
     element.append(
-      `<meta name="description" content="${escapeAttribute(SEO_DESCRIPTION)}">
+      `<meta name="description" content="${escapeAttribute(TAGLINE)}">
       <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
       <meta name="theme-color" content="#ff6600">
       <link rel="canonical" href="${FILTERED_HOME}">
@@ -152,11 +161,11 @@ class HeadHandler implements HTMLRewriterElementContentHandlers {
       <meta property="og:type" content="website">
       <meta property="og:site_name" content="HNFiltered">
       <meta property="og:title" content="${escapeAttribute(SEO_TITLE)}">
-      <meta property="og:description" content="${escapeAttribute(SEO_DESCRIPTION)}">
+      <meta property="og:description" content="${escapeAttribute(TAGLINE)}">
       <meta property="og:url" content="${FILTERED_HOME}">
       <meta name="twitter:card" content="summary">
       <meta name="twitter:title" content="${escapeAttribute(SEO_TITLE)}">
-      <meta name="twitter:description" content="${escapeAttribute(SEO_DESCRIPTION)}">
+      <meta name="twitter:description" content="${escapeAttribute(TAGLINE)}">
       <script type="application/ld+json">${SEO_JSON_LD}</script>`,
       { html: true },
     );
@@ -243,7 +252,7 @@ class NavigationHandler implements HTMLRewriterElementContentHandlers {
       })
       .join("");
     element.append(
-      `<span class="hnfiltered-status">&nbsp;| <button class="hnfiltered-count" type="button" popovertarget="hnfiltered-list-popover">Auto-Filtered: ${countLabel}</button><span class="hnfiltered-why-panel hnfiltered-list-panel" id="hnfiltered-list-popover" popover><strong class="hnfiltered-list-heading">Filtered from this page</strong><ol class="hnfiltered-list">${filteredItems}</ol><a class="hnfiltered-show-all" href="${FILTERED_HOME}?show=all">Show everything</a></span> | <button class="hnfiltered-why-toggle" type="button" popovertarget="hnfiltered-why-popover">why?</button><span class="hnfiltered-why-panel" id="hnfiltered-why-popover" popover>Hacker News, unchanged, minus stories whose discussion provides strong evidence that clicking the link will be a waste of time.<span class="hnfiltered-popover-credit"><span>An experiment by</span><a class="hnfiltered-popover-brand" href="https://mintshelf.com/" rel="noopener noreferrer">${MINT_SHELF_MARK}<span>Mint Shelf</span></a></span></span></span>`,
+      `<span class="hnfiltered-status">&nbsp;| <button class="hnfiltered-count" type="button" popovertarget="hnfiltered-list-popover">Auto-Filtered: ${countLabel}</button><span class="hnfiltered-why-panel hnfiltered-list-panel" id="hnfiltered-list-popover" popover><strong class="hnfiltered-list-heading">Filtered from this page</strong><ol class="hnfiltered-list">${filteredItems}</ol><a class="hnfiltered-show-all" href="${FILTERED_HOME}?show=all">Show everything</a></span> | <button class="hnfiltered-why-toggle" type="button" popovertarget="hnfiltered-why-popover">why?</button><span class="hnfiltered-why-panel" id="hnfiltered-why-popover" popover>${TAGLINE}<span class="hnfiltered-popover-credit"><span>An experiment by</span><a class="hnfiltered-popover-brand" href="https://mintshelf.com/" rel="noopener noreferrer">${MINT_SHELF_MARK}<span>Mint Shelf</span></a></span></span></span>`,
       { html: true },
     );
   }
@@ -275,7 +284,7 @@ class FooterHandler implements HTMLRewriterElementContentHandlers {
     element.after(
       `<div class="hnfiltered-footer"${shadowText}>
         <div class="hnfiltered-quote" id="hnfiltered-why">
-          <span>Hacker News, unchanged, minus stories whose discussion provides strong evidence that clicking the link will be a waste of time.</span>
+          <span>${TAGLINE}</span>
           ${filterLine}
         </div>
         <div class="hnfiltered-credit">
@@ -345,7 +354,7 @@ export async function renderHomepage(
   );
   headers.set(
     "Content-Security-Policy",
-    "default-src 'none'; base-uri 'self'; form-action https://news.ycombinator.com https://hn.algolia.com; img-src https://news.ycombinator.com https://account.ycombinator.com data:; style-src 'unsafe-inline' https://news.ycombinator.com; script-src 'sha256-Djq6EPVmkwg2oxv6Ri/s/9k9GogntE8+ttrbVWxOIMs=' 'sha256-Khp8DKeMdzG6r5ov2yC8BEh68ZB7jQsWOc2Z+gSveww=' https://news.ycombinator.com https://static.cloudflareinsights.com; connect-src 'self'; frame-ancestors 'none'",
+    "default-src 'none'; base-uri 'self'; form-action https://news.ycombinator.com https://hn.algolia.com; img-src https://news.ycombinator.com https://account.ycombinator.com data:; style-src 'unsafe-inline' https://news.ycombinator.com; script-src 'sha256-Djq6EPVmkwg2oxv6Ri/s/9k9GogntE8+ttrbVWxOIMs=' 'sha256-sdXl5O4anRHks58bU1j6+pxHR/nA1Boo7UINUD12BhU=' https://news.ycombinator.com https://static.cloudflareinsights.com; connect-src 'self'; frame-ancestors 'none'",
   );
   headers.set("Content-Language", "en");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");

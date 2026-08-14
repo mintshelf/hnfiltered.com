@@ -8,4 +8,3 @@
 .wrangler/
 coverage/
 node_modules/
-.mise.local.toml

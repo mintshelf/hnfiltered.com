@@ -17,10 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          version: 2026.6.12
-          cache: true
-          experimental: true
+          bun-version: "1.3"
       - run: bun install --frozen-lockfile
-      - run: mise run check
+      - run: bun run check
