@@ -1,6 +1,6 @@
 import type { Assessment, HnItem, StoredVerdict } from "./types";
 
-export const PROMPT_VERSION = 7;
+export const PROMPT_VERSION = 8;
 const MAX_POST_ONLY_DISCUSSION = 2;
 
 export function isEligible(story: HnItem, rank: number): boolean {
