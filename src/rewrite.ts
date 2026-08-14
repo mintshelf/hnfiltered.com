@@ -123,6 +123,17 @@ class TitleHandler implements HTMLRewriterElementContentHandlers {
   }
 }
 
+class AttributeHandler implements HTMLRewriterElementContentHandlers {
+  constructor(
+    private readonly name: string,
+    private readonly value: string,
+  ) {}
+
+  element(element: Element): void {
+    element.setAttribute(this.name, this.value);
+  }
+}
+
 class NameHandler implements HTMLRewriterElementContentHandlers {
   element(element: Element): void {
     element.append('<span class="hnfiltered-wordmark">Filtered</span>', {
@@ -209,6 +220,20 @@ export async function renderHomepage(
   const transformed = new HTMLRewriter()
     .on("head", new HeadHandler(hiddenIds))
     .on("title", new TitleHandler())
+    .on("img", new AttributeHandler("alt", ""))
+    .on(
+      'a[href="https://news.ycombinator.com"] img',
+      new AttributeHandler("alt", "HNFiltered home"),
+    )
+    .on("table.itemlist", new AttributeHandler("role", "main"))
+    .on(
+      'form[action="//hn.algolia.com/"] input[name="q"]',
+      new AttributeHandler("aria-label", "Search Hacker News"),
+    )
+    .on(
+      "a.morelink",
+      new AttributeHandler("aria-label", "More Hacker News stories"),
+    )
     .on(".hnname", new NameHandler())
     .on(".hnname a", new HomeLinkHandler(homeUrl))
     .on('a[href="https://news.ycombinator.com"]', new HomeLinkHandler(homeUrl))
@@ -217,13 +242,21 @@ export async function renderHomepage(
     .transform(upstream);
 
   const headers = new Headers(transformed.headers);
+  const body = transformed.body?.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("<!doctype html>"));
+      },
+    }),
+  );
+
   headers.set(
     "Cache-Control",
     "public, max-age=30, stale-while-revalidate=120",
   );
   headers.set(
     "Content-Security-Policy",
-    "default-src 'none'; base-uri https://news.ycombinator.com/; form-action https://news.ycombinator.com/; img-src https://news.ycombinator.com https://account.ycombinator.com data:; style-src 'unsafe-inline' https://news.ycombinator.com; script-src 'sha256-NFq79iTywH79TVgamEHAoPyxAuqJgv7dGmHfZwDHvcU=' 'sha256-Khp8DKeMdzG6r5ov2yC8BEh68ZB7jQsWOc2Z+gSveww=' https://static.cloudflareinsights.com/beacon.min.js; connect-src 'self'; frame-ancestors 'none'",
+    "default-src 'none'; base-uri https://news.ycombinator.com/; form-action https://news.ycombinator.com/; img-src https://news.ycombinator.com https://account.ycombinator.com data:; style-src 'unsafe-inline' https://news.ycombinator.com; script-src 'sha256-NFq79iTywH79TVgamEHAoPyxAuqJgv7dGmHfZwDHvcU=' 'sha256-Khp8DKeMdzG6r5ov2yC8BEh68ZB7jQsWOc2Z+gSveww=' https://news.ycombinator.com https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; frame-ancestors 'none'",
   );
   headers.set("Content-Language", "en");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -232,7 +265,7 @@ export async function renderHomepage(
     "X-Robots-Tag",
     "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
   );
-  return new Response(transformed.body, {
+  return new Response(body, {
     headers,
     status: transformed.status,
   });
