@@ -22,7 +22,7 @@ const story: HnItem = {
   descendants: 12,
   id: 100,
   kids: [1, 2, 3],
-  score: 50,
+  score: 40,
   title: "Example",
   type: "story",
 };
@@ -49,13 +49,13 @@ describe("filter policy", () => {
 
   it("protects highly popular stories", () => {
     expect(
-      shouldFilter({ score: 150 }, 20, {
+      shouldFilter({ score: 50 }, 20, {
         ...assessment,
         artifactFailureProbability: 0.98,
       }),
     ).toBe(false);
-    expect(shouldFilter({ score: 150 }, 20, assessment)).toBe(false);
-    expect(shouldFilter({ score: 149 }, 20, assessment)).toBe(true);
+    expect(shouldFilter({ score: 50 }, 20, assessment)).toBe(false);
+    expect(shouldFilter({ score: 49 }, 20, assessment)).toBe(true);
   });
 
   it("protects clearly controversial stories", () => {

@@ -3,7 +3,7 @@ import type { Assessment, HnItem, StoredVerdict } from "./types";
 export const PROMPT_VERSION = 2;
 export const MIN_DESCENDANTS = 6;
 export const MIN_TOP_LEVEL_THREADS = 2;
-export const POPULAR_SCORE = 150;
+export const POPULAR_SCORE = 50;
 export const TARGET_FILTERED_STORIES = 6;
 
 export function isEligible(story: HnItem, rank: number): boolean {
