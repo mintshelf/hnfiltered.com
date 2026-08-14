@@ -65,22 +65,34 @@ export async function runAnalysis(env: Env): Promise<FilterManifest> {
   for (let index = 0; index < candidates.length; index += 3) {
     await Promise.all(
       candidates.slice(index, index + 3).map(async ({ rank, story }) => {
-        const input = await buildAssessmentInput(story, rank);
-        const assessment = await assessStory(input, env.OPENAI_API_KEY!, model);
-        const verdict: StoredVerdict = {
-          analyzedAt: new Date().toISOString(),
-          assessment,
-          descendants: story.descendants ?? 0,
-          model,
-          promptVersion: PROMPT_VERSION,
-          score: story.score ?? 0,
-          storyId: story.id,
-          title: story.title ?? "",
-        };
-        existingById.set(story.id, verdict);
-        await env.VERDICTS.put(verdictKey(story.id), JSON.stringify(verdict), {
-          expirationTtl: VERDICT_TTL_SECONDS,
-        });
+        try {
+          const input = await buildAssessmentInput(story, rank);
+          const assessment = await assessStory(
+            input,
+            env.OPENAI_API_KEY!,
+            model,
+          );
+          const verdict: StoredVerdict = {
+            analyzedAt: new Date().toISOString(),
+            assessment,
+            descendants: story.descendants ?? 0,
+            model,
+            promptVersion: PROMPT_VERSION,
+            score: story.score ?? 0,
+            storyId: story.id,
+            title: story.title ?? "",
+          };
+          existingById.set(story.id, verdict);
+          await env.VERDICTS.put(
+            verdictKey(story.id),
+            JSON.stringify(verdict),
+            {
+              expirationTtl: VERDICT_TTL_SECONDS,
+            },
+          );
+        } catch (error) {
+          console.error(`Unable to assess story ${story.id}`, error);
+        }
       }),
     );
   }
