@@ -217,6 +217,7 @@ class NavigationHandler implements HTMLRewriterElementContentHandlers {
   constructor(
     private readonly filteredStories: FilteredStorySummary[],
     private readonly pageUrl: string,
+    private readonly page: number,
   ) {}
 
   element(element: Element): void {
@@ -232,8 +233,12 @@ class NavigationHandler implements HTMLRewriterElementContentHandlers {
         return `<li><a href="https://news.ycombinator.com/item?id=${story.id}">${escapeAttribute(story.title)}</a><span class="hnfiltered-reason">${escapeAttribute(reason)}</span></li>`;
       })
       .join("");
+    const listHeading =
+      this.page === 1
+        ? "Filtered from this page"
+        : `Filtered through page ${this.page}`;
     element.append(
-      `<span class="hnfiltered-status">&nbsp;| <button class="hnfiltered-count" type="button" popovertarget="hnfiltered-list-popover">Auto-Filtered: ${countLabel}</button><span class="hnfiltered-why-panel hnfiltered-list-panel" id="hnfiltered-list-popover" popover><strong class="hnfiltered-list-heading">Filtered from this page</strong><ol class="hnfiltered-list">${filteredItems}</ol><a class="hnfiltered-show-all" href="${escapeAttribute(this.pageUrl)}${this.pageUrl.includes("?") ? "&" : "?"}show=all">Show everything</a></span> | <button class="hnfiltered-why-toggle" type="button" popovertarget="hnfiltered-why-popover">why?</button><span class="hnfiltered-why-panel" id="hnfiltered-why-popover" popover>${TAGLINE}<span class="hnfiltered-popover-credit"><span>An experiment by</span><a class="hnfiltered-popover-brand" href="https://mintshelf.com/" rel="noopener noreferrer">${MINT_SHELF_MARK}<span>Mint Shelf</span></a></span></span></span>`,
+      `<span class="hnfiltered-status">&nbsp;| <button class="hnfiltered-count" type="button" popovertarget="hnfiltered-list-popover">Auto-Filtered: ${countLabel}</button><span class="hnfiltered-why-panel hnfiltered-list-panel" id="hnfiltered-list-popover" popover><strong class="hnfiltered-list-heading">${listHeading}</strong><ol class="hnfiltered-list">${filteredItems}</ol><a class="hnfiltered-show-all" href="${escapeAttribute(this.pageUrl)}${this.pageUrl.includes("?") ? "&" : "?"}show=all">Show everything</a></span> | <button class="hnfiltered-why-toggle" type="button" popovertarget="hnfiltered-why-popover">why?</button><span class="hnfiltered-why-panel" id="hnfiltered-why-popover" popover>${TAGLINE}<span class="hnfiltered-popover-credit"><span>An experiment by</span><a class="hnfiltered-popover-brand" href="https://mintshelf.com/" rel="noopener noreferrer">${MINT_SHELF_MARK}<span>Mint Shelf</span></a></span></span></span>`,
       { html: true },
     );
   }
@@ -297,18 +302,21 @@ export async function renderHomepage(
   const showAll = requestUrl.searchParams.get("show") === "all";
   const firstRank = (page - 1) * 30 + 1;
   const lastRank = page * 30;
-  const filteredStories = (await getFilteredStories(env, manifest)).filter(
-    (story) =>
-      story.rank === undefined
-        ? page === 1
-        : story.rank >= firstRank && story.rank <= lastRank,
+  const allFilteredStories = await getFilteredStories(env, manifest);
+  const visibleFilteredStories = allFilteredStories.filter((story) =>
+    story.rank === undefined
+      ? page === 1
+      : story.rank >= firstRank && story.rank <= lastRank,
   );
-  const hiddenIds = showAll ? [] : filteredStories.map(({ id }) => id);
+  const cumulativeFilteredStories = allFilteredStories.filter(
+    (story) => story.rank === undefined || story.rank <= lastRank,
+  );
+  const hiddenIds = showAll ? [] : visibleFilteredStories.map(({ id }) => id);
   const pageManifest: FilterManifest = {
     ...manifest,
-    activeIds: filteredStories.map(({ id }) => id),
-    filteredStories,
-    predictedIds: filteredStories.map(({ id }) => id),
+    activeIds: cumulativeFilteredStories.map(({ id }) => id),
+    filteredStories: cumulativeFilteredStories,
+    predictedIds: cumulativeFilteredStories.map(({ id }) => id),
   };
   const upstream = await getHomepage(page);
   const transformed = new HTMLRewriter()
@@ -338,7 +346,10 @@ export async function renderHomepage(
       'a[href="https://news.ycombinator.com"]',
       new HomeLinkHandler(FILTERED_HOME),
     )
-    .on(".pagetop", new NavigationHandler(filteredStories, pageUrl))
+    .on(
+      ".pagetop",
+      new NavigationHandler(cumulativeFilteredStories, pageUrl, page),
+    )
     .on(".yclinks", new FooterHandler(pageManifest, pageUrl, showAll))
     .transform(upstream);
 
