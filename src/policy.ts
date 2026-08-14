@@ -56,3 +56,43 @@ export function shouldFilter(
     assessment.failureModes.length > 0
   );
 }
+
+export function selectFilteredIds(
+  rankedStories: Array<{ rank: number; story: HnItem }>,
+  verdicts: ReadonlyMap<number, StoredVerdict | null>,
+): number[] {
+  const strictMatches = rankedStories
+    .filter(({ rank, story }) => {
+      const verdict = verdicts.get(story.id);
+      return verdict ? shouldFilter(story, rank, verdict.assessment) : false;
+    })
+    .map(({ story }) => story.id);
+  if (strictMatches.length > 0) return strictMatches;
+
+  const visibleFallbacks = rankedStories.filter(
+    ({ rank }) => rank > 5 && rank <= 30,
+  );
+  const assessedFallback = visibleFallbacks
+    .map((entry) => ({ ...entry, verdict: verdicts.get(entry.story.id) }))
+    .filter((entry): entry is typeof entry & { verdict: StoredVerdict } =>
+      Boolean(entry.verdict),
+    )
+    .sort((left, right) => {
+      const risk = (entry: typeof left) => {
+        const assessment = entry.verdict.assessment;
+        return (
+          assessment.artifactFailureProbability +
+          Math.min(assessment.independentEvidenceThreads, 4) * 0.08 +
+          Math.min(assessment.supportingCommentIds.length, 4) * 0.03 -
+          assessment.controversyProbability * 0.15 +
+          entry.rank * 0.002
+        );
+      };
+      return risk(right) - risk(left);
+    })[0];
+
+  if (assessedFallback) return [assessedFallback.story.id];
+
+  const leastPopularVisibleStory = visibleFallbacks.at(-1);
+  return leastPopularVisibleStory ? [leastPopularVisibleStory.story.id] : [];
+}

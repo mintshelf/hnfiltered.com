@@ -110,8 +110,7 @@ class HeadHandler implements HTMLRewriterElementContentHandlers {
       <meta name="twitter:card" content="summary">
       <meta name="twitter:title" content="${escapeAttribute(SEO_TITLE)}">
       <meta name="twitter:description" content="${escapeAttribute(SEO_DESCRIPTION)}">
-      <script type="application/ld+json">${SEO_JSON_LD}</script>
-      <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"73acd73aa63f468dac6e5c989e7ccdcf"}'></script>`,
+      <script type="application/ld+json">${SEO_JSON_LD}</script>`,
       { html: true },
     );
   }
@@ -131,6 +130,13 @@ class AttributeHandler implements HTMLRewriterElementContentHandlers {
 
   element(element: Element): void {
     element.setAttribute(this.name, this.value);
+  }
+}
+
+class MoreLinkHandler implements HTMLRewriterElementContentHandlers {
+  element(element: Element): void {
+    element.setInnerContent("More stories");
+    element.setAttribute("aria-label", "More Hacker News stories");
   }
 }
 
@@ -227,15 +233,12 @@ export async function renderHomepage(
       'a[href="https://news.ycombinator.com"] img',
       new AttributeHandler("alt", "HNFiltered home"),
     )
-    .on("table.itemlist", new AttributeHandler("role", "main"))
+    .on("#bigbox > td > table", new AttributeHandler("role", "main"))
     .on(
       'form[action="//hn.algolia.com/"] input[name="q"]',
       new AttributeHandler("aria-label", "Search Hacker News"),
     )
-    .on(
-      "a.morelink",
-      new AttributeHandler("aria-label", "More Hacker News stories"),
-    )
+    .on("a.morelink", new MoreLinkHandler())
     .on(".hnname", new NameHandler())
     .on(".hnname a", new HomeLinkHandler(homeUrl))
     .on('a[href="https://news.ycombinator.com"]', new HomeLinkHandler(homeUrl))
@@ -258,7 +261,7 @@ export async function renderHomepage(
   );
   headers.set(
     "Content-Security-Policy",
-    "default-src 'none'; base-uri https://news.ycombinator.com/; form-action https://news.ycombinator.com/; img-src https://news.ycombinator.com https://account.ycombinator.com data:; style-src 'unsafe-inline' https://news.ycombinator.com; script-src 'sha256-NFq79iTywH79TVgamEHAoPyxAuqJgv7dGmHfZwDHvcU=' 'sha256-Khp8DKeMdzG6r5ov2yC8BEh68ZB7jQsWOc2Z+gSveww=' https://news.ycombinator.com https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; frame-ancestors 'none'",
+    "default-src 'none'; base-uri https://news.ycombinator.com/; form-action https://news.ycombinator.com/; img-src https://news.ycombinator.com https://account.ycombinator.com data:; style-src 'unsafe-inline' https://news.ycombinator.com; script-src 'sha256-NFq79iTywH79TVgamEHAoPyxAuqJgv7dGmHfZwDHvcU=' 'sha256-Khp8DKeMdzG6r5ov2yC8BEh68ZB7jQsWOc2Z+gSveww=' https://news.ycombinator.com https://static.cloudflareinsights.com; connect-src 'self'; frame-ancestors 'none'",
   );
   headers.set("Content-Language", "en");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");

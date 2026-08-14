@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { isEligible, shouldAnalyze, shouldFilter } from "../src/policy";
+import {
+  isEligible,
+  selectFilteredIds,
+  shouldAnalyze,
+  shouldFilter,
+} from "../src/policy";
 import type { Assessment, HnItem, StoredVerdict } from "../src/types";
 
 const assessment: Assessment = {
@@ -69,5 +74,55 @@ describe("filter policy", () => {
     expect(
       shouldAnalyze({ ...story, descendants: 15 }, existing, existing.model),
     ).toBe(true);
+  });
+
+  it("selects the highest-risk visible story when strict filtering finds none", () => {
+    const moderateVerdict: StoredVerdict = {
+      analyzedAt: new Date().toISOString(),
+      assessment: {
+        ...assessment,
+        artifactFailureProbability: 0.62,
+      },
+      descendants: 10,
+      model: "gpt-5.6-luna",
+      promptVersion: 1,
+      score: 20,
+      storyId: 200,
+      title: "Moderate risk",
+    };
+    const lowVerdict: StoredVerdict = {
+      ...moderateVerdict,
+      assessment: {
+        ...moderateVerdict.assessment,
+        artifactFailureProbability: 0.08,
+        independentEvidenceThreads: 0,
+        supportingCommentIds: [],
+      },
+      storyId: 201,
+      title: "Low risk",
+    };
+    const rankedStories = [
+      { rank: 9, story: { ...story, id: 200 } },
+      { rank: 20, story: { ...story, id: 201 } },
+    ];
+
+    expect(
+      selectFilteredIds(
+        rankedStories,
+        new Map([
+          [200, moderateVerdict],
+          [201, lowVerdict],
+        ]),
+      ),
+    ).toEqual([200]);
+  });
+
+  it("still guarantees one visible fallback before assessments exist", () => {
+    const rankedStories = Array.from({ length: 30 }, (_, index) => ({
+      rank: index + 1,
+      story: { ...story, id: index + 1 },
+    }));
+
+    expect(selectFilteredIds(rankedStories, new Map())).toEqual([30]);
   });
 });

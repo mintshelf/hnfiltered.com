@@ -3,8 +3,8 @@ import { assessStory } from "./openai";
 import {
   isEligible,
   PROMPT_VERSION,
+  selectFilteredIds,
   shouldAnalyze,
-  shouldFilter,
 } from "./policy";
 import type { Env, FilterManifest, HnItem, StoredVerdict } from "./types";
 
@@ -87,12 +87,7 @@ export async function runAnalysis(env: Env): Promise<FilterManifest> {
     );
   }
 
-  const predictedIds = rankedStories
-    .filter(({ rank, story }) => {
-      const verdict = existingById.get(story.id);
-      return verdict ? shouldFilter(story, rank, verdict.assessment) : false;
-    })
-    .map(({ story }) => story.id);
+  const predictedIds = selectFilteredIds(rankedStories, existingById);
 
   const mode = env.FILTER_MODE === "active" ? "active" : "shadow";
   const manifest: FilterManifest = {
