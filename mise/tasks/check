@@ -10,3 +10,4 @@ for path in README.md CONTRIBUTING.md BIBLIOGRAPHY.md SECURITY.md .github/CODEOW
 done
 
 git diff --check
+bun run check
