@@ -1,20 +1,14 @@
 import type { Assessment, HnItem, StoredVerdict } from "./types";
 
-export const PROMPT_VERSION = 4;
-export const MIN_DESCENDANTS = 1;
-export const MIN_TOP_LEVEL_THREADS = 1;
-export const POPULAR_SCORE = 50;
-export const TARGET_FILTERED_STORIES = 6;
+export const PROMPT_VERSION = 5;
 
 export function isEligible(story: HnItem, rank: number): boolean {
   return (
-    rank > 5 &&
+    rank <= 90 &&
     story.type === "story" &&
     !story.dead &&
     !story.deleted &&
-    Boolean(story.title) &&
-    (story.descendants ?? 0) >= MIN_DESCENDANTS &&
-    (story.kids?.length ?? 0) >= MIN_TOP_LEVEL_THREADS
+    Boolean(story.title)
   );
 }
 
@@ -33,34 +27,19 @@ export function shouldAnalyze(
 
   const descendants = story.descendants ?? 0;
   const added = descendants - existing.descendants;
+  if (existing.descendants < 5 && added > 0) return true;
   return added >= 5 && descendants >= Math.ceil(existing.descendants * 1.4);
 }
 
 export function shouldFilter(
-  story: Pick<HnItem, "score">,
-  rank: number,
+  _story: Pick<HnItem, "score">,
+  _rank: number,
   assessment: Assessment,
 ): boolean {
-  if (rank <= 5 || assessment.controversyProbability >= 0.7) {
-    return false;
-  }
-
-  const probabilityThreshold = 0.3;
-  const threadThreshold = rank <= 15 ? 3 : 2;
-  const interestThreshold = (assessment.interestProbability ?? 0) + 0.15;
-  const mixedSignalFailure =
-    assessment.artifactFailureProbability >= 0.4 &&
-    assessment.supportingCommentIds.length >= 3 &&
-    assessment.supportingCommentIds.length >=
-      (assessment.interestCommentIds?.length ?? 0);
-
   return (
-    (assessment.artifactFailureProbability >=
-      Math.max(probabilityThreshold, interestThreshold) ||
-      mixedSignalFailure) &&
-    assessment.independentEvidenceThreads >= threadThreshold &&
-    assessment.supportingCommentIds.length >= threadThreshold &&
-    assessment.failureModes.length > 0
+    assessment.verdict === "filter" &&
+    assessment.failureModes.length > 0 &&
+    (assessment.basis === "post" || assessment.supportingCommentIds.length > 0)
   );
 }
 
@@ -70,55 +49,10 @@ export function selectFilteredIds(
 ): number[] {
   const strictMatches = rankedStories
     .filter(({ rank, story }) => {
-      if (rank > 30) return false;
+      if (rank > 90) return false;
       const verdict = verdicts.get(story.id);
       return verdict ? shouldFilter(story, rank, verdict.assessment) : false;
     })
     .map(({ story }) => story.id);
-  if (strictMatches.length >= TARGET_FILTERED_STORIES) return strictMatches;
-
-  const visibleFallbacks = rankedStories.filter(({ rank, story }) => {
-    const verdict = verdicts.get(story.id);
-    return (
-      rank > 5 &&
-      rank <= 30 &&
-      (story.score ?? 0) < POPULAR_SCORE &&
-      (!verdict || verdict.assessment.controversyProbability < 0.7)
-    );
-  });
-  const assessedFallbacks = visibleFallbacks
-    .map((entry) => ({ ...entry, verdict: verdicts.get(entry.story.id) }))
-    .filter((entry): entry is typeof entry & { verdict: StoredVerdict } => {
-      const assessment = entry.verdict?.assessment;
-      return Boolean(
-        assessment &&
-        assessment.artifactFailureProbability >= 0.3 &&
-        assessment.artifactFailureProbability >=
-          (assessment.interestProbability ?? 0) + 0.15 &&
-        assessment.failureModes.length > 0 &&
-        assessment.independentEvidenceThreads >= 1 &&
-        assessment.supportingCommentIds.length >= 1,
-      );
-    })
-    .sort((left, right) => {
-      const risk = (entry: typeof left) => {
-        const assessment = entry.verdict.assessment;
-        return (
-          assessment.artifactFailureProbability +
-          Math.min(assessment.independentEvidenceThreads, 4) * 0.08 +
-          Math.min(assessment.supportingCommentIds.length, 4) * 0.03 -
-          assessment.controversyProbability * 0.15 +
-          entry.rank * 0.002
-        );
-      };
-      return risk(right) - risk(left);
-    });
-
-  const selected = new Set(strictMatches);
-  for (const fallback of assessedFallbacks) {
-    if (selected.size >= TARGET_FILTERED_STORIES) break;
-    selected.add(fallback.story.id);
-  }
-
-  return [...selected];
+  return strictMatches;
 }

@@ -13,7 +13,7 @@
   },
   "vars": {
     "FILTER_MODE": "active",
-    "MAX_ANALYSES_PER_RUN": "25",
+    "MAX_ANALYSES_PER_RUN": "30",
     "OPENAI_MODEL": "gpt-5.6-luna",
   },
   "kv_namespaces": [

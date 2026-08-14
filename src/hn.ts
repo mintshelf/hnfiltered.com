@@ -97,5 +97,6 @@ export async function buildAssessmentInput(
     score: story.score ?? 0,
     text: plainText(story.text).slice(0, 4_000) || null,
     title: plainText(story.title),
+    url: story.url ?? null,
   };
 }

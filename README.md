@@ -2,17 +2,17 @@
 
 Hacker News, unchanged, minus stories whose discussion suggests that clicking the link will be a waste of time.
 
-[hnfiltered.com](https://hnfiltered.com) is a Cloudflare Worker that removes low-value stories from the Hacker News front page. Links, accounts, voting, and comments stay on Hacker News.
+[hnfiltered.com](https://hnfiltered.com) is a Cloudflare Worker that removes low-value stories from the first three pages of Hacker News. Links, accounts, voting, and comments stay on Hacker News.
 
 An experiment by [Mint Shelf](https://mintshelf.com).
 
 ## How it works
 
-Every five minutes, the Worker reads ranks 6 through 30 and assesses every story with at least one top-level comment. `gpt-5.6-luna` weighs firsthand reports of a wasted click against genuine interest in the discussion. A small policy layer protects popular and controversial stories, then stores the result in Workers KV.
+Every five minutes, the Worker reads the top 90 stories. `gpt-5.6-luna` makes a plain keep-or-filter decision from the title, URL, story text, and up to 12 top-level comments, then stores the result in Workers KV. Stories with little or no discussion are still considered, but a lack of comments is not itself a reason to filter.
 
-Page requests fetch the real HN homepage and remove the selected rows with `HTMLRewriter`. Model calls only happen in the scheduled job.
+Page requests fetch the corresponding HN page and remove selected rows with `HTMLRewriter`. The first two "More stories" links stay on HNFiltered; everything else points to Hacker News. Model calls only happen in the scheduled job.
 
-The top five stories are never removed. The filter targets up to six stories outside the top five; when the strict threshold finds fewer, it only adds stories with an identified failure mode and supporting comments. It never pads the count with unevidenced removals. Stories with at least 50 points require a strict evidence match and can never be added as fallback cleanup. Clearly controversial stories are protected.
+There are no point thresholds, popularity exceptions, confidence scores, or minimum number of removals. Discussion-based decisions must cite at least one supplied comment. Sparse-discussion stories can only be filtered when the post metadata itself gives Luna enough reason. Ambiguous stories stay visible.
 
 ## Local development
 

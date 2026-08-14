@@ -9,7 +9,6 @@ import type {
 const HN_HOME = "https://news.ycombinator.com/";
 const FILTERED_HOME = "https://hnfiltered.com/";
 const REPOSITORY_URL = "https://github.com/mintshelf/hnfiltered.com";
-const CACHE_KEY = new Request("https://hnfiltered.invalid/cache/hn-home");
 const SEO_TITLE = "HNFiltered | A more useful Hacker News front page";
 const SEO_JSON_LD = JSON.stringify({
   "@context": "https://schema.org",
@@ -53,12 +52,17 @@ function escapeAttribute(value: string): string {
   });
 }
 
-async function getHomepage(): Promise<Response> {
+async function getHomepage(page: number): Promise<Response> {
   const cache = (caches as CacheStorage & { default: Cache }).default;
-  const cached = await cache.match(CACHE_KEY);
+  const cacheKey = new Request(
+    `https://hnfiltered.invalid/cache/hn-page-${page}`,
+  );
+  const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
-  const upstream = await fetch(HN_HOME, {
+  const upstreamUrl = new URL(HN_HOME);
+  if (page > 1) upstreamUrl.searchParams.set("p", String(page));
+  const upstream = await fetch(upstreamUrl, {
     headers: { "User-Agent": "HNFiltered.com/0.1 (+https://hnfiltered.com)" },
   });
   if (!upstream.ok) throw new Error(`Hacker News returned ${upstream.status}`);
@@ -70,7 +74,7 @@ async function getHomepage(): Promise<Response> {
     status: upstream.status,
     statusText: upstream.statusText,
   });
-  await cache.put(CACHE_KEY, cacheable.clone());
+  await cache.put(cacheKey, cacheable.clone());
   return cacheable;
 }
 
@@ -200,9 +204,14 @@ class RemoveHandler implements HTMLRewriterElementContentHandlers {
 }
 
 class MoreLinkHandler implements HTMLRewriterElementContentHandlers {
+  constructor(private readonly page: number) {}
+
   element(element: Element): void {
     element.setInnerContent("More stories");
     element.setAttribute("aria-label", "More Hacker News stories");
+    if (this.page < 3) {
+      element.setAttribute("href", `${FILTERED_HOME}?p=${this.page + 1}`);
+    }
   }
 }
 
@@ -236,7 +245,10 @@ class UpstreamUrlHandler implements HTMLRewriterElementContentHandlers {
 class NavigationHandler implements HTMLRewriterElementContentHandlers {
   private handled = false;
 
-  constructor(private readonly filteredStories: FilteredStorySummary[]) {}
+  constructor(
+    private readonly filteredStories: FilteredStorySummary[],
+    private readonly pageUrl: string,
+  ) {}
 
   element(element: Element): void {
     if (this.handled) return;
@@ -256,7 +268,7 @@ class NavigationHandler implements HTMLRewriterElementContentHandlers {
       })
       .join("");
     element.append(
-      `<span class="hnfiltered-status">&nbsp;| <button class="hnfiltered-count" type="button" popovertarget="hnfiltered-list-popover">Auto-Filtered: ${countLabel}</button><span class="hnfiltered-why-panel hnfiltered-list-panel" id="hnfiltered-list-popover" popover><strong class="hnfiltered-list-heading">Filtered from this page</strong><ol class="hnfiltered-list">${filteredItems}</ol><a class="hnfiltered-show-all" href="${FILTERED_HOME}?show=all">Show everything</a></span> | <button class="hnfiltered-why-toggle" type="button" popovertarget="hnfiltered-why-popover">why?</button><span class="hnfiltered-why-panel" id="hnfiltered-why-popover" popover>${TAGLINE}<span class="hnfiltered-popover-credit"><span>An experiment by</span><a class="hnfiltered-popover-brand" href="https://mintshelf.com/" rel="noopener noreferrer">${MINT_SHELF_MARK}<span>Mint Shelf</span></a></span></span></span>`,
+      `<span class="hnfiltered-status">&nbsp;| <button class="hnfiltered-count" type="button" popovertarget="hnfiltered-list-popover">Auto-Filtered: ${countLabel}</button><span class="hnfiltered-why-panel hnfiltered-list-panel" id="hnfiltered-list-popover" popover><strong class="hnfiltered-list-heading">Filtered from this page</strong><ol class="hnfiltered-list">${filteredItems}</ol><a class="hnfiltered-show-all" href="${escapeAttribute(this.pageUrl)}${this.pageUrl.includes("?") ? "&" : "?"}show=all">Show everything</a></span> | <button class="hnfiltered-why-toggle" type="button" popovertarget="hnfiltered-why-popover">why?</button><span class="hnfiltered-why-panel" id="hnfiltered-why-popover" popover>${TAGLINE}<span class="hnfiltered-popover-credit"><span>An experiment by</span><a class="hnfiltered-popover-brand" href="https://mintshelf.com/" rel="noopener noreferrer">${MINT_SHELF_MARK}<span>Mint Shelf</span></a></span></span></span>`,
       { html: true },
     );
   }
@@ -312,11 +324,28 @@ export async function renderHomepage(
   manifest: FilterManifest,
 ): Promise<Response> {
   const requestUrl = new URL(request.url);
-  const homeUrl = FILTERED_HOME;
+  const page = Math.min(
+    3,
+    Math.max(1, Number.parseInt(requestUrl.searchParams.get("p") ?? "1", 10)),
+  );
+  const pageUrl = page === 1 ? FILTERED_HOME : `${FILTERED_HOME}?p=${page}`;
   const showAll = requestUrl.searchParams.get("show") === "all";
-  const hiddenIds = showAll ? [] : manifest.activeIds;
-  const filteredStories = await getFilteredStories(env, manifest);
-  const upstream = await getHomepage();
+  const firstRank = (page - 1) * 30 + 1;
+  const lastRank = page * 30;
+  const filteredStories = (await getFilteredStories(env, manifest)).filter(
+    (story) =>
+      story.rank === undefined
+        ? page === 1
+        : story.rank >= firstRank && story.rank <= lastRank,
+  );
+  const hiddenIds = showAll ? [] : filteredStories.map(({ id }) => id);
+  const pageManifest: FilterManifest = {
+    ...manifest,
+    activeIds: filteredStories.map(({ id }) => id),
+    filteredStories,
+    predictedIds: filteredStories.map(({ id }) => id),
+  };
+  const upstream = await getHomepage(page);
   const transformed = new HTMLRewriter()
     .on("head", new HeadHandler(hiddenIds))
     .on("title", new TitleHandler())
@@ -337,12 +366,15 @@ export async function renderHomepage(
       'form[action="//hn.algolia.com/"] input[name="q"]',
       new AttributeHandler("aria-label", "Search Hacker News"),
     )
-    .on("a.morelink", new MoreLinkHandler())
+    .on("a.morelink", new MoreLinkHandler(page))
     .on(".hnname", new NameHandler())
-    .on(".hnname a", new HomeLinkHandler(homeUrl))
-    .on('a[href="https://news.ycombinator.com"]', new HomeLinkHandler(homeUrl))
-    .on(".pagetop", new NavigationHandler(filteredStories))
-    .on(".yclinks", new FooterHandler(manifest, homeUrl, showAll))
+    .on(".hnname a", new HomeLinkHandler(FILTERED_HOME))
+    .on(
+      'a[href="https://news.ycombinator.com"]',
+      new HomeLinkHandler(FILTERED_HOME),
+    )
+    .on(".pagetop", new NavigationHandler(filteredStories, pageUrl))
+    .on(".yclinks", new FooterHandler(pageManifest, pageUrl, showAll))
     .transform(upstream);
 
   const headers = new Headers(transformed.headers);

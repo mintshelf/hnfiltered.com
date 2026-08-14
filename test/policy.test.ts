@@ -10,132 +10,80 @@ import {
 import type { Assessment, HnItem, StoredVerdict } from "../src/types";
 
 const assessment: Assessment = {
-  artifactFailureProbability: 0.99,
-  controversyProbability: 0.2,
+  basis: "discussion",
   failureModes: ["thin_or_no_substance"],
-  independentEvidenceThreads: 3,
-  interestCommentIds: [],
-  interestProbability: 0.1,
-  rationale: "Independent comments identify a lack of substance.",
-  supportingCommentIds: [1, 2, 3],
+  rationale: "A commenter who opened it found no substance.",
+  supportingCommentIds: [1],
+  verdict: "filter",
 };
 
 const story: HnItem = {
-  descendants: 12,
+  descendants: 1,
   id: 100,
-  kids: [1, 2, 3],
+  kids: [1],
   score: 40,
   title: "Example",
   type: "story",
 };
 
+function stored(storyId: number, value = assessment): StoredVerdict {
+  return {
+    analyzedAt: new Date().toISOString(),
+    assessment: value,
+    descendants: 1,
+    model: "gpt-5.6-luna",
+    promptVersion: PROMPT_VERSION,
+    score: 40,
+    storyId,
+    title: "Example",
+  };
+}
+
 describe("filter policy", () => {
-  it("never filters the top five", () => {
-    expect(shouldFilter(story, 5, assessment)).toBe(false);
+  it("considers stories throughout the first three pages", () => {
+    expect(isEligible(story, 1)).toBe(true);
+    expect(isEligible({ ...story, descendants: 0, kids: [] }, 90)).toBe(true);
+    expect(isEligible(story, 91)).toBe(false);
   });
 
-  it("requires stronger evidence near the top", () => {
-    expect(
-      shouldFilter(story, 10, {
-        ...assessment,
-        artifactFailureProbability: 0.29,
-      }),
-    ).toBe(false);
-    expect(
-      shouldFilter(story, 10, {
-        ...assessment,
-        artifactFailureProbability: 0.3,
-      }),
-    ).toBe(true);
+  it("does not use points or rank as protection", () => {
+    expect(shouldFilter({ score: 500 }, 1, assessment)).toBe(true);
+    expect(shouldFilter({ score: 0 }, 90, assessment)).toBe(true);
   });
 
-  it("only filters popular stories with a strict evidence match", () => {
-    expect(
-      shouldFilter({ score: 50 }, 20, {
-        ...assessment,
-        artifactFailureProbability: 0.98,
-        independentEvidenceThreads: 1,
-        supportingCommentIds: [1],
-      }),
-    ).toBe(false);
-    expect(
-      shouldFilter({ score: 50 }, 20, {
-        ...assessment,
-        artifactFailureProbability: 0.3,
-      }),
-    ).toBe(true);
-    expect(shouldFilter({ score: 49 }, 20, assessment)).toBe(true);
-  });
-
-  it("protects clearly controversial stories", () => {
+  it("requires a cited comment for discussion-based filtering", () => {
     expect(
       shouldFilter(story, 20, {
         ...assessment,
-        controversyProbability: 0.7,
+        supportingCommentIds: [],
       }),
     ).toBe(false);
   });
 
-  it("requires waste-of-time evidence to outweigh genuine interest", () => {
+  it("allows sparse stories to be filtered from the post itself", () => {
     expect(
       shouldFilter(story, 20, {
         ...assessment,
-        artifactFailureProbability: 0.6,
-        interestCommentIds: [4, 5, 6, 7],
-        interestProbability: 0.5,
-      }),
-    ).toBe(false);
-    expect(
-      shouldFilter(story, 20, {
-        ...assessment,
-        artifactFailureProbability: 0.65,
-        interestCommentIds: [4, 5, 6, 7],
-        interestProbability: 0.5,
+        basis: "post",
+        supportingCommentIds: [],
       }),
     ).toBe(true);
   });
 
-  it("filters mixed discussions when waste reports equal or outnumber interest", () => {
-    expect(
-      shouldFilter(story, 10, {
-        ...assessment,
-        artifactFailureProbability: 0.48,
-        independentEvidenceThreads: 5,
-        interestCommentIds: [4, 5, 6, 7],
-        interestProbability: 0.58,
-        supportingCommentIds: [1, 2, 3, 8, 9],
-      }),
-    ).toBe(true);
-    expect(
-      shouldFilter(story, 10, {
-        ...assessment,
-        artifactFailureProbability: 0.48,
-        independentEvidenceThreads: 3,
-        interestCommentIds: [4, 5, 6, 7],
-        interestProbability: 0.58,
-        supportingCommentIds: [1, 2, 3],
-      }),
-    ).toBe(false);
-  });
-
-  it("requires enough discussion before analysis", () => {
-    expect(isEligible(story, 6)).toBe(true);
-    expect(isEligible({ ...story, descendants: 1, kids: [1] }, 6)).toBe(true);
-    expect(isEligible({ ...story, descendants: 0 }, 6)).toBe(false);
-    expect(isEligible({ ...story, kids: [] }, 6)).toBe(false);
+  it("requires an explicit filter verdict and failure mode", () => {
+    expect(shouldFilter(story, 20, { ...assessment, verdict: "keep" })).toBe(
+      false,
+    );
+    expect(shouldFilter(story, 20, { ...assessment, failureModes: [] })).toBe(
+      false,
+    );
   });
 
   it("reanalyzes only after material discussion growth", () => {
-    const existing: StoredVerdict = {
-      analyzedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-      assessment,
-      descendants: 10,
-      model: "gpt-5.6-luna",
-      promptVersion: PROMPT_VERSION,
-      score: 20,
-      storyId: story.id,
-      title: story.title!,
-    };
+    const existing = stored(story.id);
+    existing.analyzedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    existing.descendants = 10;
+
     expect(
       shouldAnalyze({ ...story, descendants: 14 }, existing, existing.model),
     ).toBe(false);
@@ -144,49 +92,37 @@ describe("filter policy", () => {
     ).toBe(true);
   });
 
-  it("only supplements strict matches with evidence-backed assessments", () => {
-    const moderateVerdict: StoredVerdict = {
-      analyzedAt: new Date().toISOString(),
-      assessment: {
-        ...assessment,
-        artifactFailureProbability: 0.62,
-      },
-      descendants: 10,
-      model: "gpt-5.6-luna",
-      promptVersion: 1,
-      score: 20,
-      storyId: 200,
-      title: "Moderate risk",
-    };
-    const lowVerdict: StoredVerdict = {
-      ...moderateVerdict,
-      assessment: {
-        ...moderateVerdict.assessment,
-        artifactFailureProbability: 0.08,
-        independentEvidenceThreads: 0,
-        supportingCommentIds: [],
-      },
-      storyId: 201,
-      title: "Low risk",
-    };
-    const rankedStories = Array.from({ length: 6 }, (_, index) => ({
-      rank: index + 9,
-      story: { ...story, id: 200 + index },
-    }));
+  it("reanalyzes sparse stories when their first comments arrive", () => {
+    const existing = stored(story.id);
+    existing.analyzedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    existing.descendants = 0;
+
+    expect(
+      shouldAnalyze({ ...story, descendants: 1 }, existing, existing.model),
+    ).toBe(true);
+  });
+
+  it("selects supported verdicts across all 90 ranks", () => {
+    const rankedStories = [
+      { rank: 2, story: { ...story, id: 200 } },
+      { rank: 67, story: { ...story, id: 201 } },
+      { rank: 91, story: { ...story, id: 202 } },
+    ];
 
     expect(
       selectFilteredIds(
         rankedStories,
         new Map([
-          [200, moderateVerdict],
-          [201, lowVerdict],
+          [200, stored(200)],
+          [201, stored(201)],
+          [202, stored(202)],
         ]),
       ),
-    ).toEqual([200]);
+    ).toEqual([200, 201]);
   });
 
-  it("does not pad the filter count before assessments exist", () => {
-    const rankedStories = Array.from({ length: 30 }, (_, index) => ({
+  it("never pads the filter count", () => {
+    const rankedStories = Array.from({ length: 90 }, (_, index) => ({
       rank: index + 1,
       story: { ...story, id: index + 1 },
     }));

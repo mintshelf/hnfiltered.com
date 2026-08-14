@@ -34,14 +34,11 @@ export const FAILURE_MODES = [
 export type FailureMode = (typeof FAILURE_MODES)[number];
 
 export interface Assessment {
-  artifactFailureProbability: number;
-  controversyProbability: number;
+  basis: "discussion" | "post";
   failureModes: FailureMode[];
-  independentEvidenceThreads: number;
-  interestCommentIds: number[];
-  interestProbability: number;
   rationale: string;
   supportingCommentIds: number[];
+  verdict: "filter" | "keep";
 }
 
 export interface StoryForAssessment {
@@ -53,6 +50,7 @@ export interface StoryForAssessment {
   score: number;
   text: string | null;
   title: string;
+  url: string | null;
 }
 
 export interface StoredVerdict {
@@ -77,5 +75,6 @@ export interface FilterManifest {
 export interface FilteredStorySummary {
   failureModes: FailureMode[];
   id: number;
+  rank?: number;
   title: string;
 }

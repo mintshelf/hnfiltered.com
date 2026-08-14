@@ -32,9 +32,9 @@ export async function runAnalysis(env: Env): Promise<FilterManifest> {
   const model = env.OPENAI_MODEL ?? "gpt-5.6-luna";
   const maxAnalyses = Math.max(
     1,
-    Math.min(25, Number(env.MAX_ANALYSES_PER_RUN ?? 25)),
+    Math.min(30, Number(env.MAX_ANALYSES_PER_RUN ?? 30)),
   );
-  const ids = await getTopStories(30);
+  const ids = await getTopStories(90);
   const items = await getItems(ids);
   const rankedStories = items
     .map((story, index) => ({ rank: index + 1, story }))
@@ -66,8 +66,6 @@ export async function runAnalysis(env: Env): Promise<FilterManifest> {
     await Promise.all(
       candidates.slice(index, index + 3).map(async ({ rank, story }) => {
         const input = await buildAssessmentInput(story, rank);
-        if (input.comments.length < 1) return;
-
         const assessment = await assessStory(input, env.OPENAI_API_KEY!, model);
         const verdict: StoredVerdict = {
           analyzedAt: new Date().toISOString(),
@@ -93,11 +91,15 @@ export async function runAnalysis(env: Env): Promise<FilterManifest> {
   const storyById = new Map(
     rankedStories.map(({ story }) => [story.id, story]),
   );
+  const rankById = new Map(
+    rankedStories.map(({ rank, story }) => [story.id, rank]),
+  );
   const filteredStories = predictedIds.map((id) => {
     const verdict = existingById.get(id);
     return {
       failureModes: verdict?.assessment.failureModes ?? [],
       id,
+      rank: rankById.get(id),
       title: verdict?.title ?? storyById.get(id)?.title ?? "Filtered story",
     };
   });

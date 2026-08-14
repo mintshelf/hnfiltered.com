@@ -61,6 +61,10 @@ export default {
     }
 
     if (url.pathname !== "/") return redirectToHackerNews(url);
+    const page = Number.parseInt(url.searchParams.get("p") ?? "1", 10);
+    if (!Number.isInteger(page) || page < 1 || page > 3) {
+      return redirectToHackerNews(url);
+    }
 
     try {
       return await renderHomepage(request, env, await readManifest(env));
