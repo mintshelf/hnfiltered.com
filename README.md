@@ -12,7 +12,7 @@ Every five minutes, the Worker reads the current front page and its top-level co
 
 Page requests fetch the real HN homepage and remove the selected rows with `HTMLRewriter`. Model calls only happen in the scheduled job.
 
-The top five stories are never removed. At least six stories outside the top five are filtered; when the strict threshold finds fewer than six, the remaining slots go to the highest-risk stories already assessed on the page. Highly popular and clearly controversial stories are protected.
+The top five stories are never removed. The filter targets up to six stories outside the top five; when the strict threshold finds fewer, it only adds stories with an identified failure mode and supporting comments. It never pads the count with unevidenced removals. Highly popular and clearly controversial stories are protected.
 
 ## Local development
 

@@ -91,7 +91,7 @@ describe("filter policy", () => {
     ).toBe(true);
   });
 
-  it("selects the highest-risk visible stories when strict filtering finds fewer than six", () => {
+  it("only supplements strict matches with evidence-backed assessments", () => {
     const moderateVerdict: StoredVerdict = {
       analyzedAt: new Date().toISOString(),
       assessment: {
@@ -129,17 +129,15 @@ describe("filter policy", () => {
           [201, lowVerdict],
         ]),
       ),
-    ).toEqual([200, 201, 205, 204, 203, 202]);
+    ).toEqual([200]);
   });
 
-  it("still guarantees six visible fallbacks before assessments exist", () => {
+  it("does not pad the filter count before assessments exist", () => {
     const rankedStories = Array.from({ length: 30 }, (_, index) => ({
       rank: index + 1,
       story: { ...story, id: index + 1 },
     }));
 
-    expect(selectFilteredIds(rankedStories, new Map())).toEqual([
-      30, 29, 28, 27, 26, 25,
-    ]);
+    expect(selectFilteredIds(rankedStories, new Map())).toEqual([]);
   });
 });

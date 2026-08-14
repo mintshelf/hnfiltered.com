@@ -251,7 +251,7 @@ class NavigationHandler implements HTMLRewriterElementContentHandlers {
           ? story.failureModes
               .map((mode) => FAILURE_MODE_LABELS[mode])
               .join(", ")
-          : "lower-confidence cleanup";
+          : "flagged by the discussion";
         return `<li><a href="https://news.ycombinator.com/item?id=${story.id}">${escapeAttribute(story.title)}</a><span class="hnfiltered-reason">${escapeAttribute(reasons)}</span></li>`;
       })
       .join("");
