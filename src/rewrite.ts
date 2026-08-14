@@ -8,6 +8,7 @@ import type {
 
 const HN_HOME = "https://news.ycombinator.com/";
 const FILTERED_HOME = "https://hnfiltered.com/";
+const REPOSITORY_URL = "https://github.com/mintshelf/hnfiltered.com";
 const CACHE_KEY = new Request("https://hnfiltered.invalid/cache/hn-home");
 const SEO_TITLE = "HNFiltered | A more useful Hacker News front page";
 const SEO_JSON_LD = JSON.stringify({
@@ -21,6 +22,7 @@ const SEO_JSON_LD = JSON.stringify({
     name: "Mint Shelf",
     url: "https://mintshelf.com/",
   },
+  sameAs: REPOSITORY_URL,
 });
 const DISMISS_SCRIPT = `document.addEventListener("focusin",e=>document.querySelectorAll("[popover]:popover-open").forEach(p=>{const b=document.querySelector('[popovertarget="'+p.id+'"]');!p.contains(e.target)&&!b?.contains(e.target)&&p.hidePopover()}));`;
 
@@ -135,6 +137,8 @@ class HeadHandler implements HTMLRewriterElementContentHandlers {
         .hnfiltered-credit-prefix{color:#000;font-family:Verdana,Geneva,sans-serif;font-size:8pt;font-weight:normal}
         .hnfiltered-brand{display:inline-flex;align-items:center;gap:6px;color:#1a1c19!important;font-family:"Public Sans",system-ui,sans-serif;font-size:11pt;font-weight:650;letter-spacing:-.01em;text-decoration:none!important}
         .hnfiltered-brand svg{display:block;flex:none;width:24px;height:24px}
+        .hnfiltered-credit-separator{color:#828282}
+        .hnfiltered-source{color:#828282!important;font-family:Verdana,Geneva,sans-serif;font-size:8pt;text-decoration:underline}
         @media(max-width:700px){
           .hnfiltered-wordmark{margin-right:5px;padding-top:1px;padding-right:4px}
           .pagetop{line-height:1.35}
@@ -293,6 +297,8 @@ class FooterHandler implements HTMLRewriterElementContentHandlers {
             ${MINT_SHELF_MARK}
             <span>Mint Shelf</span>
           </a>
+          <span class="hnfiltered-credit-separator" aria-hidden="true">|</span>
+          <a class="hnfiltered-source" href="${REPOSITORY_URL}" rel="noopener noreferrer">GitHub</a>
         </div>
       </div>`,
       { html: true },

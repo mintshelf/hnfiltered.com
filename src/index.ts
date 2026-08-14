@@ -41,7 +41,7 @@ export default {
 
     if (url.pathname === "/llms.txt") {
       return textResponse(
-        `# HNFiltered\n\n> ${TAGLINE}\n\nHNFiltered removes stories when their Hacker News discussion suggests the link is not worth opening. Popular, controversial, and merely unpopular stories are protected from ordinary negative sentiment.\n\nAn experiment by Mint Shelf.\n\n- Homepage: https://hnfiltered.com/\n- Creator: https://mintshelf.com/\n`,
+        `# HNFiltered\n\n> ${TAGLINE}\n\nHNFiltered removes stories when their Hacker News discussion suggests the link is not worth opening. Popular, controversial, and merely unpopular stories are protected from ordinary negative sentiment.\n\nAn experiment by Mint Shelf.\n\n- Homepage: https://hnfiltered.com/\n- Source: https://github.com/mintshelf/hnfiltered.com\n- Creator: https://mintshelf.com/\n`,
         "text/markdown; charset=utf-8",
       );
     }
