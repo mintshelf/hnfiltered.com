@@ -3,6 +3,7 @@ import type { Assessment, HnItem, StoredVerdict } from "./types";
 export const PROMPT_VERSION = 2;
 export const MIN_DESCENDANTS = 6;
 export const MIN_TOP_LEVEL_THREADS = 2;
+export const POPULAR_SCORE = 150;
 export const TARGET_FILTERED_STORIES = 6;
 
 export function isEligible(story: HnItem, rank: number): boolean {
@@ -42,7 +43,7 @@ export function shouldFilter(
 ): boolean {
   if (
     rank <= 5 ||
-    (story.score ?? 0) >= 200 ||
+    (story.score ?? 0) >= POPULAR_SCORE ||
     assessment.controversyProbability >= 0.7
   ) {
     return false;
@@ -77,7 +78,7 @@ export function selectFilteredIds(
     return (
       rank > 5 &&
       rank <= 30 &&
-      (story.score ?? 0) < 200 &&
+      (story.score ?? 0) < POPULAR_SCORE &&
       (!verdict || verdict.assessment.controversyProbability < 0.7)
     );
   });

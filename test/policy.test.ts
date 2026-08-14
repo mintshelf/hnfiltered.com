@@ -49,12 +49,13 @@ describe("filter policy", () => {
 
   it("protects highly popular stories", () => {
     expect(
-      shouldFilter({ score: 200 }, 20, {
+      shouldFilter({ score: 150 }, 20, {
         ...assessment,
         artifactFailureProbability: 0.98,
       }),
     ).toBe(false);
-    expect(shouldFilter({ score: 200 }, 20, assessment)).toBe(false);
+    expect(shouldFilter({ score: 150 }, 20, assessment)).toBe(false);
+    expect(shouldFilter({ score: 149 }, 20, assessment)).toBe(true);
   });
 
   it("protects clearly controversial stories", () => {
