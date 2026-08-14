@@ -158,8 +158,10 @@ class NavigationHandler implements HTMLRewriterElementContentHandlers {
   element(element: Element): void {
     if (this.handled) return;
     this.handled = true;
+    const countLabel =
+      this.filteredCount === 0 ? "All Clear" : String(this.filteredCount);
     element.append(
-      `<span class="hnfiltered-status">&nbsp;| <span class="hnfiltered-count">Auto-Filtered: ${this.filteredCount}</span> | <button class="hnfiltered-why-toggle" type="button" popovertarget="hnfiltered-why-popover">why?</button><span class="hnfiltered-why-panel" id="hnfiltered-why-popover" popover>Hacker News, unchanged, minus stories whose discussion provides strong evidence that clicking the link will be a waste of time.<span class="hnfiltered-popover-credit"><span>An experiment by</span><a class="hnfiltered-popover-brand" href="https://mintshelf.com/" rel="noopener noreferrer">${MINT_SHELF_MARK}<span>Mint Shelf</span></a></span></span></span>`,
+      `<span class="hnfiltered-status">&nbsp;| <span class="hnfiltered-count">Auto-Filtered: ${countLabel}</span> | <button class="hnfiltered-why-toggle" type="button" popovertarget="hnfiltered-why-popover">why?</button><span class="hnfiltered-why-panel" id="hnfiltered-why-popover" popover>Hacker News, unchanged, minus stories whose discussion provides strong evidence that clicking the link will be a waste of time.<span class="hnfiltered-popover-credit"><span>An experiment by</span><a class="hnfiltered-popover-brand" href="https://mintshelf.com/" rel="noopener noreferrer">${MINT_SHELF_MARK}<span>Mint Shelf</span></a></span></span></span>`,
       { html: true },
     );
   }
