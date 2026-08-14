@@ -65,7 +65,7 @@ class HeadHandler implements HTMLRewriterElementContentHandlers {
       `<style>
         ${selectors}
         .hnname{white-space:nowrap}
-        .hnfiltered-wordmark{display:inline-block;margin:0 8px 0 4px;padding:0 3px;border-radius:2px;background:#4a1f44;color:#fff45c;font-family:Georgia,"Times New Roman",serif;font-size:inherit;font-style:italic;font-weight:700;letter-spacing:-.03em;line-height:inherit;transform:rotate(-2deg);transform-origin:center}
+        .hnfiltered-wordmark{display:inline-block;margin:0 8px 0 4px;padding:1px 3px;border-radius:2px;background:#4a1f44;color:#fff45c;font-family:Georgia,"Times New Roman",serif;font-size:inherit;font-style:italic;font-weight:700;letter-spacing:-.03em;line-height:inherit;transform:rotate(-2deg);transform-origin:center}
         .hnfiltered-status{display:inline-block;white-space:nowrap}
         .hnfiltered-count{padding:1px 3px;border-radius:2px;background:rgba(255,255,255,.3);color:#3f210e;font-style:italic;font-weight:700}
         .hnfiltered-why-toggle{appearance:none;padding:0;border:0;background:none;color:#000;font-family:inherit;font-size:inherit;font-style:normal;font-weight:normal;line-height:inherit;cursor:pointer}
@@ -82,6 +82,7 @@ class HeadHandler implements HTMLRewriterElementContentHandlers {
         .hnfiltered-brand svg{display:block;flex:none;width:24px;height:24px}
         @media(max-width:700px){
           .hnfiltered-wordmark{margin-right:5px}
+          .hnfiltered-status{position:relative;top:2px;margin-top:2px;line-height:1.35}
           .hnfiltered-why-panel{top:62px;right:12px;left:12px;width:auto;transform:none}
           .hnfiltered-popover-credit{justify-content:center}
           .hnfiltered-popover-brand{font-size:10pt}
@@ -127,6 +128,12 @@ class AttributeHandler implements HTMLRewriterElementContentHandlers {
 
   element(element: Element): void {
     element.setAttribute(this.name, this.value);
+  }
+}
+
+class RemoveHandler implements HTMLRewriterElementContentHandlers {
+  element(element: Element): void {
+    element.remove();
   }
 }
 
@@ -236,6 +243,10 @@ export async function renderHomepage(
   const transformed = new HTMLRewriter()
     .on("head", new HeadHandler(hiddenIds))
     .on("title", new TitleHandler())
+    .on(
+      'script[src*="static.cloudflareinsights.com/beacon.min.js"]',
+      new RemoveHandler(),
+    )
     .on("a[href], link[href]", new UpstreamUrlHandler("href"))
     .on("img[src], script[src]", new UpstreamUrlHandler("src"))
     .on("form[action]", new UpstreamUrlHandler("action"))
