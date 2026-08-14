@@ -47,8 +47,12 @@ describe("filter policy", () => {
   });
 
   it("does not use points or rank as protection", () => {
-    expect(shouldFilter({ score: 500 }, 1, assessment)).toBe(true);
-    expect(shouldFilter({ score: 0 }, 90, assessment)).toBe(true);
+    expect(shouldFilter({ descendants: 50, score: 500 }, 1, assessment)).toBe(
+      true,
+    );
+    expect(shouldFilter({ descendants: 1, score: 0 }, 90, assessment)).toBe(
+      true,
+    );
   });
 
   it("requires a cited comment for discussion-based filtering", () => {
@@ -68,6 +72,16 @@ describe("filter policy", () => {
         supportingCommentIds: [],
       }),
     ).toBe(true);
+  });
+
+  it("does not let post metadata overrule an established discussion", () => {
+    expect(
+      shouldFilter({ ...story, descendants: 3 }, 20, {
+        ...assessment,
+        basis: "post",
+        supportingCommentIds: [],
+      }),
+    ).toBe(false);
   });
 
   it("requires an explicit filter verdict and failure mode", () => {

@@ -1,6 +1,7 @@
 import type { Assessment, HnItem, StoredVerdict } from "./types";
 
-export const PROMPT_VERSION = 5;
+export const PROMPT_VERSION = 6;
+const MAX_POST_ONLY_DISCUSSION = 2;
 
 export function isEligible(story: HnItem, rank: number): boolean {
   return (
@@ -32,14 +33,17 @@ export function shouldAnalyze(
 }
 
 export function shouldFilter(
-  _story: Pick<HnItem, "score">,
+  story: Pick<HnItem, "descendants" | "score">,
   _rank: number,
   assessment: Assessment,
 ): boolean {
   return (
     assessment.verdict === "filter" &&
     assessment.failureModes.length > 0 &&
-    (assessment.basis === "post" || assessment.supportingCommentIds.length > 0)
+    ((assessment.basis === "post" &&
+      (story.descendants ?? 0) <= MAX_POST_ONLY_DISCUSSION) ||
+      (assessment.basis === "discussion" &&
+        assessment.supportingCommentIds.length > 0))
   );
 }
 
