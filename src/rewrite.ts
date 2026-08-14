@@ -65,16 +65,19 @@ class HeadHandler implements HTMLRewriterElementContentHandlers {
         .hnfiltered-why summary{display:inline;cursor:pointer;list-style:none}
         .hnfiltered-why summary::-webkit-details-marker{display:none}
         .hnfiltered-why-panel{position:absolute;z-index:10;top:calc(100% + 7px);right:0;box-sizing:border-box;width:360px;padding:10px 12px;border:1px solid #ff6600;background:#f6f6ef;box-shadow:0 3px 10px rgba(0,0,0,.16);color:#3c3c3c;font-size:10px;font-weight:normal;line-height:1.45;white-space:normal}
-        .hnfiltered-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:18px;margin:8px 16px 0;color:#828282;font-size:8pt;line-height:1.45}
-        .hnfiltered-quote{text-align:center}
-        .hnfiltered-credit{display:inline-flex;align-items:center;gap:7px;color:#1a1c19!important;font-family:"Public Sans",system-ui,sans-serif;font-size:9pt;font-weight:650;letter-spacing:-.01em;text-decoration:none!important;white-space:nowrap}
-        .hnfiltered-credit svg{display:block;flex:none;width:24px;height:24px}
+        .hnfiltered-footer{display:grid;grid-template-columns:1fr;gap:6px;margin:8px 16px 0;color:#828282;font-size:8pt;line-height:1.45}
+        .hnfiltered-quote{width:100%;text-align:center}
+        .hnfiltered-credit{display:inline-flex;justify-self:end;align-items:center;gap:7px;white-space:nowrap}
+        .hnfiltered-credit-prefix{color:#828282;font-family:Verdana,Geneva,sans-serif;font-size:8pt;font-weight:normal}
+        .hnfiltered-brand{display:inline-flex;align-items:center;gap:6px;color:#1a1c19!important;font-family:"Public Sans",system-ui,sans-serif;font-size:9pt;font-weight:650;letter-spacing:-.01em;text-decoration:none!important}
+        .hnfiltered-brand svg{display:block;flex:none;width:24px;height:24px}
         @media(max-width:700px){
           .hnfiltered-wordmark{margin-right:4px;font-size:9px}
           .hnfiltered-status{font-size:9px}
           .hnfiltered-why-panel{position:fixed;top:34px;right:12px;left:12px;width:auto}
-          .hnfiltered-footer{grid-template-columns:1fr;justify-items:center;gap:8px;margin:8px 12px 0}
-          .hnfiltered-credit{font-size:8.5pt}
+          .hnfiltered-footer{gap:8px;margin:8px 12px 0}
+          .hnfiltered-credit{justify-self:center}
+          .hnfiltered-brand{font-size:8.5pt}
         }
       </style>`,
       { html: true },
@@ -134,10 +137,13 @@ class FooterHandler implements HTMLRewriterElementContentHandlers {
           <span>Hacker News, unchanged, minus stories whose discussion provides strong evidence that clicking the link will be a waste of time.</span>
           ${filterLine}
         </div>
-        <a class="hnfiltered-credit" href="https://mintshelf.com/" rel="noopener noreferrer">
-          ${MINT_SHELF_MARK}
-          <span>An experiment by Mint Shelf</span>
-        </a>
+        <div class="hnfiltered-credit">
+          <span class="hnfiltered-credit-prefix">An experiment by</span>
+          <a class="hnfiltered-brand" href="https://mintshelf.com/" rel="noopener noreferrer">
+            ${MINT_SHELF_MARK}
+            <span>Mint Shelf</span>
+          </a>
+        </div>
       </div>`,
       { html: true },
     );
