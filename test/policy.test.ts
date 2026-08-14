@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   isEligible,
+  PROMPT_VERSION,
   selectFilteredIds,
   shouldAnalyze,
   shouldFilter,
@@ -35,10 +36,15 @@ describe("filter policy", () => {
     expect(
       shouldFilter(story, 10, {
         ...assessment,
-        artifactFailureProbability: 0.97,
+        artifactFailureProbability: 0.74,
       }),
     ).toBe(false);
-    expect(shouldFilter(story, 10, assessment)).toBe(true);
+    expect(
+      shouldFilter(story, 10, {
+        ...assessment,
+        artifactFailureProbability: 0.75,
+      }),
+    ).toBe(true);
   });
 
   it("protects highly popular stories", () => {
@@ -48,7 +54,16 @@ describe("filter policy", () => {
         artifactFailureProbability: 0.98,
       }),
     ).toBe(false);
-    expect(shouldFilter({ score: 200 }, 20, assessment)).toBe(true);
+    expect(shouldFilter({ score: 200 }, 20, assessment)).toBe(false);
+  });
+
+  it("protects clearly controversial stories", () => {
+    expect(
+      shouldFilter(story, 20, {
+        ...assessment,
+        controversyProbability: 0.7,
+      }),
+    ).toBe(false);
   });
 
   it("requires enough discussion before analysis", () => {
@@ -63,7 +78,7 @@ describe("filter policy", () => {
       assessment,
       descendants: 10,
       model: "gpt-5.6-luna",
-      promptVersion: 1,
+      promptVersion: PROMPT_VERSION,
       score: 20,
       storyId: story.id,
       title: story.title!,
@@ -76,7 +91,7 @@ describe("filter policy", () => {
     ).toBe(true);
   });
 
-  it("selects the highest-risk visible stories when strict filtering finds fewer than three", () => {
+  it("selects the highest-risk visible stories when strict filtering finds fewer than six", () => {
     const moderateVerdict: StoredVerdict = {
       analyzedAt: new Date().toISOString(),
       assessment: {
@@ -101,11 +116,10 @@ describe("filter policy", () => {
       storyId: 201,
       title: "Low risk",
     };
-    const rankedStories = [
-      { rank: 9, story: { ...story, id: 200 } },
-      { rank: 20, story: { ...story, id: 201 } },
-      { rank: 30, story: { ...story, id: 202 } },
-    ];
+    const rankedStories = Array.from({ length: 6 }, (_, index) => ({
+      rank: index + 9,
+      story: { ...story, id: 200 + index },
+    }));
 
     expect(
       selectFilteredIds(
@@ -115,15 +129,17 @@ describe("filter policy", () => {
           [201, lowVerdict],
         ]),
       ),
-    ).toEqual([200, 201, 202]);
+    ).toEqual([200, 201, 205, 204, 203, 202]);
   });
 
-  it("still guarantees three visible fallbacks before assessments exist", () => {
+  it("still guarantees six visible fallbacks before assessments exist", () => {
     const rankedStories = Array.from({ length: 30 }, (_, index) => ({
       rank: index + 1,
       story: { ...story, id: index + 1 },
     }));
 
-    expect(selectFilteredIds(rankedStories, new Map())).toEqual([30, 29, 28]);
+    expect(selectFilteredIds(rankedStories, new Map())).toEqual([
+      30, 29, 28, 27, 26, 25,
+    ]);
   });
 });

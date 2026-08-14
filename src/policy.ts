@@ -1,9 +1,9 @@
 import type { Assessment, HnItem, StoredVerdict } from "./types";
 
-export const PROMPT_VERSION = 1;
+export const PROMPT_VERSION = 2;
 export const MIN_DESCENDANTS = 6;
 export const MIN_TOP_LEVEL_THREADS = 2;
-export const MIN_FILTERED_STORIES = 3;
+export const MIN_FILTERED_STORIES = 6;
 
 export function isEligible(story: HnItem, rank: number): boolean {
   return (
@@ -40,15 +40,16 @@ export function shouldFilter(
   rank: number,
   assessment: Assessment,
 ): boolean {
-  if (rank <= 5) return false;
-
-  let probabilityThreshold = rank <= 15 ? 0.98 : 0.92;
-  let threadThreshold = rank <= 15 ? 3 : 2;
-
-  if ((story.score ?? 0) >= 200) {
-    probabilityThreshold = 0.99;
-    threadThreshold = 3;
+  if (
+    rank <= 5 ||
+    (story.score ?? 0) >= 200 ||
+    assessment.controversyProbability >= 0.7
+  ) {
+    return false;
   }
+
+  const probabilityThreshold = rank <= 15 ? 0.75 : 0.6;
+  const threadThreshold = rank <= 15 ? 2 : 1;
 
   return (
     assessment.artifactFailureProbability >= probabilityThreshold &&
@@ -71,9 +72,15 @@ export function selectFilteredIds(
     .map(({ story }) => story.id);
   if (strictMatches.length >= MIN_FILTERED_STORIES) return strictMatches;
 
-  const visibleFallbacks = rankedStories.filter(
-    ({ rank }) => rank > 5 && rank <= 30,
-  );
+  const visibleFallbacks = rankedStories.filter(({ rank, story }) => {
+    const verdict = verdicts.get(story.id);
+    return (
+      rank > 5 &&
+      rank <= 30 &&
+      (story.score ?? 0) < 200 &&
+      (!verdict || verdict.assessment.controversyProbability < 0.7)
+    );
+  });
   const assessedFallbacks = visibleFallbacks
     .map((entry) => ({ ...entry, verdict: verdicts.get(entry.story.id) }))
     .filter((entry): entry is typeof entry & { verdict: StoredVerdict } =>
