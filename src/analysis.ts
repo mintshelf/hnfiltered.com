@@ -66,7 +66,7 @@ export async function runAnalysis(env: Env): Promise<FilterManifest> {
     await Promise.all(
       candidates.slice(index, index + 3).map(async ({ rank, story }) => {
         const input = await buildAssessmentInput(story, rank);
-        if (input.comments.length < 2) return;
+        if (input.comments.length < 1) return;
 
         const assessment = await assessStory(input, env.OPENAI_API_KEY!, model);
         const verdict: StoredVerdict = {
