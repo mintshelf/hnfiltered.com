@@ -81,7 +81,7 @@ describe("filter policy", () => {
       shouldFilter(story, 20, {
         ...assessment,
         artifactFailureProbability: 0.6,
-        interestCommentIds: [4, 5, 6],
+        interestCommentIds: [4, 5, 6, 7],
         interestProbability: 0.5,
       }),
     ).toBe(false);
@@ -89,10 +89,33 @@ describe("filter policy", () => {
       shouldFilter(story, 20, {
         ...assessment,
         artifactFailureProbability: 0.65,
-        interestCommentIds: [4, 5, 6],
+        interestCommentIds: [4, 5, 6, 7],
         interestProbability: 0.5,
       }),
     ).toBe(true);
+  });
+
+  it("filters mixed discussions when waste reports equal or outnumber interest", () => {
+    expect(
+      shouldFilter(story, 10, {
+        ...assessment,
+        artifactFailureProbability: 0.48,
+        independentEvidenceThreads: 5,
+        interestCommentIds: [4, 5, 6, 7],
+        interestProbability: 0.58,
+        supportingCommentIds: [1, 2, 3, 8, 9],
+      }),
+    ).toBe(true);
+    expect(
+      shouldFilter(story, 10, {
+        ...assessment,
+        artifactFailureProbability: 0.48,
+        independentEvidenceThreads: 3,
+        interestCommentIds: [4, 5, 6, 7],
+        interestProbability: 0.58,
+        supportingCommentIds: [1, 2, 3],
+      }),
+    ).toBe(false);
   });
 
   it("requires enough discussion before analysis", () => {

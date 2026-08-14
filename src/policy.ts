@@ -48,10 +48,16 @@ export function shouldFilter(
   const probabilityThreshold = 0.3;
   const threadThreshold = rank <= 15 ? 3 : 2;
   const interestThreshold = (assessment.interestProbability ?? 0) + 0.15;
+  const mixedSignalFailure =
+    assessment.artifactFailureProbability >= 0.4 &&
+    assessment.supportingCommentIds.length >= 3 &&
+    assessment.supportingCommentIds.length >=
+      (assessment.interestCommentIds?.length ?? 0);
 
   return (
-    assessment.artifactFailureProbability >=
-      Math.max(probabilityThreshold, interestThreshold) &&
+    (assessment.artifactFailureProbability >=
+      Math.max(probabilityThreshold, interestThreshold) ||
+      mixedSignalFailure) &&
     assessment.independentEvidenceThreads >= threadThreshold &&
     assessment.supportingCommentIds.length >= threadThreshold &&
     assessment.failureModes.length > 0
