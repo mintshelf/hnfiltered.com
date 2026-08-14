@@ -41,16 +41,12 @@ export function shouldFilter(
   rank: number,
   assessment: Assessment,
 ): boolean {
-  if (
-    rank <= 5 ||
-    (story.score ?? 0) >= POPULAR_SCORE ||
-    assessment.controversyProbability >= 0.7
-  ) {
+  if (rank <= 5 || assessment.controversyProbability >= 0.7) {
     return false;
   }
 
-  const probabilityThreshold = rank <= 15 ? 0.75 : 0.6;
-  const threadThreshold = rank <= 15 ? 2 : 1;
+  const probabilityThreshold = 0.3;
+  const threadThreshold = rank <= 15 ? 3 : 2;
 
   return (
     assessment.artifactFailureProbability >= probabilityThreshold &&

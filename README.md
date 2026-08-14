@@ -12,7 +12,7 @@ Every five minutes, the Worker reads ranks 6 through 30 and assesses every story
 
 Page requests fetch the real HN homepage and remove the selected rows with `HTMLRewriter`. Model calls only happen in the scheduled job.
 
-The top five stories are never removed. The filter targets up to six stories outside the top five; when the strict threshold finds fewer, it only adds stories with an identified failure mode and supporting comments. It never pads the count with unevidenced removals. Highly popular and clearly controversial stories are protected.
+The top five stories are never removed. The filter targets up to six stories outside the top five; when the strict threshold finds fewer, it only adds stories with an identified failure mode and supporting comments. It never pads the count with unevidenced removals. Stories with at least 50 points require a strict evidence match and can never be added as fallback cleanup. Clearly controversial stories are protected.
 
 ## Local development
 

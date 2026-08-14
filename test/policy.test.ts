@@ -36,25 +36,32 @@ describe("filter policy", () => {
     expect(
       shouldFilter(story, 10, {
         ...assessment,
-        artifactFailureProbability: 0.74,
+        artifactFailureProbability: 0.29,
       }),
     ).toBe(false);
     expect(
       shouldFilter(story, 10, {
         ...assessment,
-        artifactFailureProbability: 0.75,
+        artifactFailureProbability: 0.3,
       }),
     ).toBe(true);
   });
 
-  it("protects highly popular stories", () => {
+  it("only filters popular stories with a strict evidence match", () => {
     expect(
       shouldFilter({ score: 50 }, 20, {
         ...assessment,
         artifactFailureProbability: 0.98,
+        independentEvidenceThreads: 1,
+        supportingCommentIds: [1],
       }),
     ).toBe(false);
-    expect(shouldFilter({ score: 50 }, 20, assessment)).toBe(false);
+    expect(
+      shouldFilter({ score: 50 }, 20, {
+        ...assessment,
+        artifactFailureProbability: 0.3,
+      }),
+    ).toBe(true);
     expect(shouldFilter({ score: 49 }, 20, assessment)).toBe(true);
   });
 
