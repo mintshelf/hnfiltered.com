@@ -2,6 +2,19 @@ import { readManifest, runAnalysis } from "./analysis";
 import { renderHomepage } from "./rewrite";
 import type { Env } from "./types";
 
+const DESCRIPTION =
+  "Hacker News, unchanged, minus stories whose discussion provides strong evidence that clicking the link will be a waste of time.";
+
+function textResponse(body: string, contentType: string): Response {
+  return new Response(body, {
+    headers: {
+      "Cache-Control": "public, max-age=3600",
+      "Content-Type": contentType,
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
 function redirectToHackerNews(url: URL): Response {
   const destination = new URL(
     url.pathname + url.search,
@@ -13,6 +26,27 @@ function redirectToHackerNews(url: URL): Response {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+
+    if (url.pathname === "/robots.txt") {
+      return textResponse(
+        "User-agent: *\nAllow: /\nDisallow: /health\nSitemap: https://hnfiltered.com/sitemap.xml\n",
+        "text/plain; charset=utf-8",
+      );
+    }
+
+    if (url.pathname === "/sitemap.xml") {
+      return textResponse(
+        '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://hnfiltered.com/</loc><changefreq>hourly</changefreq></url></urlset>\n',
+        "application/xml; charset=utf-8",
+      );
+    }
+
+    if (url.pathname === "/llms.txt") {
+      return textResponse(
+        `# HNFiltered\n\n> ${DESCRIPTION}\n\nHNFiltered is a lightweight, independent Hacker News front page that uses discussion context to omit stories with strong evidence of being a poor use of the reader's time. Popular, controversial, and merely unpopular stories are deliberately protected from filtering.\n\nAn experiment by Mint Shelf.\n\n- Homepage: https://hnfiltered.com/\n- Creator: https://mintshelf.com/\n`,
+        "text/markdown; charset=utf-8",
+      );
+    }
 
     if (url.pathname === "/health") {
       const manifest = await readManifest(env);

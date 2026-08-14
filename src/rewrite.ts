@@ -3,6 +3,11 @@ import type { Env, FilterManifest } from "./types";
 const HN_HOME = "https://news.ycombinator.com/";
 const FILTERED_HOME = "https://hnfiltered.com/";
 const CACHE_KEY = new Request("https://hnfiltered.invalid/cache/hn-home");
+const SEO_DESCRIPTION =
+  "Hacker News, unchanged, minus stories whose discussion provides strong evidence that clicking the link will be a waste of time.";
+const SEO_TITLE = "HNFiltered | A more useful Hacker News front page";
+const SEO_JSON_LD =
+  '{"@context":"https://schema.org","@type":"WebSite","name":"HNFiltered","url":"https://hnfiltered.com/","description":"Hacker News, unchanged, minus stories whose discussion provides strong evidence that clicking the link will be a waste of time.","creator":{"@type":"Organization","name":"Mint Shelf","url":"https://mintshelf.com/"}}';
 const DISMISS_SCRIPT =
   'document.addEventListener("focusin",e=>{const p=document.getElementById("hnfiltered-why-popover"),b=document.querySelector(".hnfiltered-why-toggle");p?.matches(":popover-open")&&!p.contains(e.target)&&!b?.contains(e.target)&&p.hidePopover()});';
 
@@ -62,24 +67,27 @@ class HeadHandler implements HTMLRewriterElementContentHandlers {
     element.append(
       `<style>
         ${selectors}
-        .hnfiltered-wordmark{display:inline-block;margin:0 8px 0 4px;color:#441752;font-family:Georgia,"Times New Roman",serif;font-size:12px;font-style:italic;font-weight:700;letter-spacing:-.03em;line-height:1;transform:rotate(-2deg);transform-origin:center}
+        .hnname{white-space:nowrap}
+        .hnfiltered-wordmark{display:inline-block;margin:0 8px 0 4px;padding:0 3px;border-radius:2px;background:#4a1f44;color:#fff45c;font-family:Georgia,"Times New Roman",serif;font-size:inherit;font-style:italic;font-weight:700;letter-spacing:-.03em;line-height:inherit;transform:rotate(-2deg);transform-origin:center}
         .hnfiltered-status{display:inline-block;white-space:nowrap}
         .hnfiltered-count{padding:1px 3px;border-radius:2px;background:rgba(255,255,255,.3);color:#3f210e;font-style:italic;font-weight:700}
-        .hnfiltered-why-toggle{appearance:none;padding:0;border:0;background:none;color:#000;font:inherit;cursor:pointer}
-        .hnfiltered-why-panel{position:fixed;z-index:10;top:32px;left:50%;box-sizing:border-box;width:360px;margin:0;padding:10px 12px;transform:translateX(-50%);border:1px solid #ff6600;background:#f6f6ef;box-shadow:0 3px 10px rgba(0,0,0,.16);color:#3c3c3c;font-family:Verdana,Geneva,sans-serif;font-size:10px;font-weight:normal;line-height:1.45;white-space:normal}
+        .hnfiltered-why-toggle{appearance:none;padding:0;border:0;background:none;color:#000;font-family:inherit;font-size:inherit;font-style:normal;font-weight:normal;line-height:inherit;cursor:pointer}
+        .hnfiltered-why-panel{position:absolute;z-index:10;top:32px;left:50%;box-sizing:border-box;width:380px;margin:0;padding:10px 12px;transform:translateX(-50%);border:1px solid #ff6600;background:#f6f6ef;box-shadow:0 3px 10px rgba(0,0,0,.16);color:#3c3c3c;font-family:Verdana,Geneva,sans-serif;font-size:10px;font-weight:normal;line-height:1.45;white-space:normal}
         .hnfiltered-why-panel::backdrop{background:transparent}
-        .hnfiltered-popover-credit{display:block;margin-top:6px;color:#828282}
-        .hnfiltered-popover-credit a{color:#1a1c19;font-family:"Public Sans",system-ui,sans-serif;font-weight:700}
+        .hnfiltered-popover-credit{display:flex;justify-content:flex-end;align-items:center;gap:7px;margin-top:8px;color:#000}
+        .hnfiltered-popover-brand{display:inline-flex;align-items:center;gap:6px;color:#1a1c19!important;font-family:"Public Sans",system-ui,sans-serif;font-size:11pt;font-weight:650;letter-spacing:-.01em;text-decoration:none!important}
+        .hnfiltered-popover-brand svg{display:block;flex:none;width:24px;height:24px}
         .hnfiltered-footer{display:grid;grid-template-columns:1fr;gap:6px;margin:8px 16px 0;color:#828282;font-size:8pt;line-height:1.45}
         .hnfiltered-quote{width:100%;text-align:center}
         .hnfiltered-credit{display:inline-flex;justify-self:end;align-items:center;gap:7px;white-space:nowrap}
-        .hnfiltered-credit-prefix{color:#828282;font-family:Verdana,Geneva,sans-serif;font-size:8pt;font-weight:normal}
+        .hnfiltered-credit-prefix{color:#000;font-family:Verdana,Geneva,sans-serif;font-size:8pt;font-weight:normal}
         .hnfiltered-brand{display:inline-flex;align-items:center;gap:6px;color:#1a1c19!important;font-family:"Public Sans",system-ui,sans-serif;font-size:11pt;font-weight:650;letter-spacing:-.01em;text-decoration:none!important}
         .hnfiltered-brand svg{display:block;flex:none;width:24px;height:24px}
         @media(max-width:700px){
-          .hnfiltered-wordmark{margin-right:5px;font-size:11px}
-          .hnfiltered-status{font-size:9px}
+          .hnfiltered-wordmark{margin-right:5px}
           .hnfiltered-why-panel{top:62px;right:12px;left:12px;width:auto;transform:none}
+          .hnfiltered-popover-credit{justify-content:center}
+          .hnfiltered-popover-brand{font-size:10pt}
           .hnfiltered-footer{gap:8px;margin:8px 12px 0}
           .hnfiltered-credit{justify-self:center}
           .hnfiltered-brand{font-size:10pt}
@@ -88,12 +96,35 @@ class HeadHandler implements HTMLRewriterElementContentHandlers {
       { html: true },
     );
     element.append(`<script>${DISMISS_SCRIPT}</script>`, { html: true });
+    element.append(
+      `<meta name="description" content="${escapeAttribute(SEO_DESCRIPTION)}">
+      <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+      <meta name="theme-color" content="#ff6600">
+      <link rel="canonical" href="${FILTERED_HOME}">
+      <link rel="alternate" type="text/markdown" href="${FILTERED_HOME}llms.txt" title="About HNFiltered">
+      <meta property="og:type" content="website">
+      <meta property="og:site_name" content="HNFiltered">
+      <meta property="og:title" content="${escapeAttribute(SEO_TITLE)}">
+      <meta property="og:description" content="${escapeAttribute(SEO_DESCRIPTION)}">
+      <meta property="og:url" content="${FILTERED_HOME}">
+      <meta name="twitter:card" content="summary">
+      <meta name="twitter:title" content="${escapeAttribute(SEO_TITLE)}">
+      <meta name="twitter:description" content="${escapeAttribute(SEO_DESCRIPTION)}">
+      <script type="application/ld+json">${SEO_JSON_LD}</script>`,
+      { html: true },
+    );
+  }
+}
+
+class TitleHandler implements HTMLRewriterElementContentHandlers {
+  element(element: Element): void {
+    element.setInnerContent(SEO_TITLE);
   }
 }
 
 class NameHandler implements HTMLRewriterElementContentHandlers {
   element(element: Element): void {
-    element.after('<span class="hnfiltered-wordmark">Filtered</span>', {
+    element.append('<span class="hnfiltered-wordmark">Filtered</span>', {
       html: true,
     });
   }
@@ -116,7 +147,7 @@ class NavigationHandler implements HTMLRewriterElementContentHandlers {
     if (this.handled) return;
     this.handled = true;
     element.append(
-      `<span class="hnfiltered-status">&nbsp;| <span class="hnfiltered-count">Auto-filtered: ${this.filteredCount}</span> | <button class="hnfiltered-why-toggle" type="button" popovertarget="hnfiltered-why-popover">why?</button><span class="hnfiltered-why-panel" id="hnfiltered-why-popover" popover>Hacker News, unchanged, minus stories whose discussion provides strong evidence that clicking the link will be a waste of time.<span class="hnfiltered-popover-credit">An experiment by <a href="https://mintshelf.com/" rel="noopener noreferrer">Mint Shelf</a></span></span></span>`,
+      `<span class="hnfiltered-status">&nbsp;| <span class="hnfiltered-count">Auto-Filtered: ${this.filteredCount}</span> | <button class="hnfiltered-why-toggle" type="button" popovertarget="hnfiltered-why-popover">why?</button><span class="hnfiltered-why-panel" id="hnfiltered-why-popover" popover>Hacker News, unchanged, minus stories whose discussion provides strong evidence that clicking the link will be a waste of time.<span class="hnfiltered-popover-credit"><span>An experiment by</span><a class="hnfiltered-popover-brand" href="https://mintshelf.com/" rel="noopener noreferrer">${MINT_SHELF_MARK}<span>Mint Shelf</span></a></span></span></span>`,
       { html: true },
     );
   }
@@ -176,6 +207,7 @@ export async function renderHomepage(
   const upstream = await getHomepage();
   const transformed = new HTMLRewriter()
     .on("head", new HeadHandler(hiddenIds))
+    .on("title", new TitleHandler())
     .on(".hnname", new NameHandler())
     .on(".hnname a", new HomeLinkHandler(homeUrl))
     .on('a[href="https://news.ycombinator.com"]', new HomeLinkHandler(homeUrl))
@@ -190,11 +222,15 @@ export async function renderHomepage(
   );
   headers.set(
     "Content-Security-Policy",
-    "default-src 'none'; base-uri https://news.ycombinator.com/; form-action https://news.ycombinator.com/; img-src https://news.ycombinator.com https://account.ycombinator.com data:; style-src 'unsafe-inline' https://news.ycombinator.com; script-src 'sha256-NFq79iTywH79TVgamEHAoPyxAuqJgv7dGmHfZwDHvcU='; frame-ancestors 'none'",
+    "default-src 'none'; base-uri https://news.ycombinator.com/; form-action https://news.ycombinator.com/; img-src https://news.ycombinator.com https://account.ycombinator.com data:; style-src 'unsafe-inline' https://news.ycombinator.com; script-src 'sha256-NFq79iTywH79TVgamEHAoPyxAuqJgv7dGmHfZwDHvcU=' 'sha256-Khp8DKeMdzG6r5ov2yC8BEh68ZB7jQsWOc2Z+gSveww=' https://static.cloudflareinsights.com/beacon.min.js; connect-src 'self'; frame-ancestors 'none'",
   );
+  headers.set("Content-Language", "en");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   headers.set("X-Content-Type-Options", "nosniff");
-  headers.set("X-Robots-Tag", "noindex, nofollow");
+  headers.set(
+    "X-Robots-Tag",
+    "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+  );
   return new Response(transformed.body, {
     headers,
     status: transformed.status,
