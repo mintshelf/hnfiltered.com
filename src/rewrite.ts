@@ -81,7 +81,7 @@ class HeadHandler implements HTMLRewriterElementContentHandlers {
         .hnfiltered-brand{display:inline-flex;align-items:center;gap:6px;color:#1a1c19!important;font-family:"Public Sans",system-ui,sans-serif;font-size:11pt;font-weight:650;letter-spacing:-.01em;text-decoration:none!important}
         .hnfiltered-brand svg{display:block;flex:none;width:24px;height:24px}
         @media(max-width:700px){
-          .hnfiltered-wordmark{margin-right:5px}
+          .hnfiltered-wordmark{margin-right:5px;padding-right:4px}
           .hnfiltered-status{position:relative;top:2px;margin-top:2px;line-height:1.35}
           .hnfiltered-why-panel{top:62px;right:12px;left:12px;width:auto;transform:none}
           .hnfiltered-popover-credit{justify-content:center}
