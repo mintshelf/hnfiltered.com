@@ -110,7 +110,8 @@ class HeadHandler implements HTMLRewriterElementContentHandlers {
       <meta name="twitter:card" content="summary">
       <meta name="twitter:title" content="${escapeAttribute(SEO_TITLE)}">
       <meta name="twitter:description" content="${escapeAttribute(SEO_DESCRIPTION)}">
-      <script type="application/ld+json">${SEO_JSON_LD}</script>`,
+      <script type="application/ld+json">${SEO_JSON_LD}</script>
+      <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"73acd73aa63f468dac6e5c989e7ccdcf"}'></script>`,
       { html: true },
     );
   }
