@@ -21,14 +21,12 @@ const RESPONSE_SCHEMA = {
     failureModes: {
       type: "array",
       items: { type: "string", enum: FAILURE_MODES },
-      uniqueItems: true,
     },
     independentEvidenceThreads: { type: "integer", minimum: 0, maximum: 12 },
     rationale: { type: "string", maxLength: 500 },
     supportingCommentIds: {
       type: "array",
       items: { type: "integer" },
-      uniqueItems: true,
     },
   },
   required: [
@@ -126,7 +124,7 @@ function validateAssessment(
   return {
     artifactFailureProbability: assessment.artifactFailureProbability,
     controversyProbability: assessment.controversyProbability,
-    failureModes: assessment.failureModes,
+    failureModes: [...new Set(assessment.failureModes)],
     independentEvidenceThreads: Math.min(
       12,
       Math.max(0, assessment.independentEvidenceThreads),
