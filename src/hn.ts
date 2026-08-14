@@ -1,4 +1,4 @@
-import type { HnItem, StoryForAssessment } from "./types";
+import type { HnItem, StoryForReview } from "./types";
 
 const API_ROOT = "https://hacker-news.firebaseio.com/v0";
 const USER_AGENT = "HNFiltered.com/0.1 (+https://hnfiltered.com)";
@@ -63,11 +63,11 @@ export async function getItems(ids: number[]): Promise<Array<HnItem | null>> {
   return results;
 }
 
-export async function buildAssessmentInput(
+export async function buildReviewInput(
   story: HnItem,
   rank: number,
-): Promise<StoryForAssessment> {
-  const commentItems = await getItems((story.kids ?? []).slice(0, 12));
+): Promise<StoryForReview> {
+  const commentItems = await getItems((story.kids ?? []).slice(0, 4));
   const comments = commentItems
     .filter(
       (comment): comment is HnItem =>
@@ -75,7 +75,7 @@ export async function buildAssessmentInput(
     )
     .map((comment) => ({
       id: comment.id,
-      text: plainText(comment.text).slice(0, 4_000),
+      text: plainText(comment.text).slice(0, 800),
     }))
     .filter((comment) => comment.text.length > 0);
 
@@ -95,7 +95,7 @@ export async function buildAssessmentInput(
     id: story.id,
     rank,
     score: story.score ?? 0,
-    text: plainText(story.text).slice(0, 4_000) || null,
+    text: plainText(story.text).slice(0, 1_200) || null,
     title: plainText(story.title),
     url: story.url ?? null,
   };

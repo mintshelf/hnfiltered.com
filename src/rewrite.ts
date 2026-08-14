@@ -1,10 +1,5 @@
 import { TAGLINE } from "./site";
-import type {
-  Env,
-  FilteredStorySummary,
-  FilterManifest,
-  StoredVerdict,
-} from "./types";
+import type { Env, FilteredStorySummary, FilterManifest } from "./types";
 
 const HN_HOME = "https://news.ycombinator.com/";
 const FILTERED_HOME = "https://hnfiltered.com/";
@@ -24,16 +19,6 @@ const SEO_JSON_LD = JSON.stringify({
   sameAs: REPOSITORY_URL,
 });
 const DISMISS_SCRIPT = `document.addEventListener("focusin",e=>document.querySelectorAll("[popover]:popover-open").forEach(p=>{const b=document.querySelector('[popovertarget="'+p.id+'"]');!p.contains(e.target)&&!b?.contains(e.target)&&p.hidePopover()}));`;
-
-const FAILURE_MODE_LABELS = {
-  broken_or_inaccessible: "broken or inaccessible",
-  fabricated_or_unsupported: "unsupported claims",
-  misleading_title: "misleading title",
-  nonfunctional_project: "nonfunctional project",
-  plagiarized_or_copied: "copied content",
-  spam_or_bait: "spam or bait",
-  thin_or_no_substance: "thin substance",
-} as const;
 
 const MINT_SHELF_MARK = `<svg aria-hidden="true" viewBox="0 0 64 64" width="24" height="24">
   <g fill="#22c55e" transform="translate(32 0) scale(1.0573 1) translate(-32 0) translate(5.5 4) scale(.2994652406) translate(-27 -28)">
@@ -79,26 +64,10 @@ async function getHomepage(page: number): Promise<Response> {
 }
 
 async function getFilteredStories(
-  env: Env,
+  _env: Env,
   manifest: FilterManifest,
 ): Promise<FilteredStorySummary[]> {
-  if (manifest.filteredStories?.length === manifest.activeIds.length) {
-    return manifest.filteredStories;
-  }
-
-  return Promise.all(
-    manifest.activeIds.map(async (id) => {
-      const verdict = await env.VERDICTS.get<StoredVerdict>(
-        `verdict:${id}`,
-        "json",
-      );
-      return {
-        failureModes: verdict?.assessment.failureModes ?? [],
-        id,
-        title: verdict?.title ?? `Story ${id}`,
-      };
-    }),
-  );
+  return manifest.filteredStories ?? [];
 }
 
 class HeadHandler implements HTMLRewriterElementContentHandlers {
@@ -259,12 +228,8 @@ class NavigationHandler implements HTMLRewriterElementContentHandlers {
         : String(this.filteredStories.length);
     const filteredItems = this.filteredStories
       .map((story) => {
-        const reasons = story.failureModes.length
-          ? story.failureModes
-              .map((mode) => FAILURE_MODE_LABELS[mode])
-              .join(", ")
-          : "flagged by the discussion";
-        return `<li><a href="https://news.ycombinator.com/item?id=${story.id}">${escapeAttribute(story.title)}</a><span class="hnfiltered-reason">${escapeAttribute(reasons)}</span></li>`;
+        const reason = story.reason ?? "flagged by Luna";
+        return `<li><a href="https://news.ycombinator.com/item?id=${story.id}">${escapeAttribute(story.title)}</a><span class="hnfiltered-reason">${escapeAttribute(reason)}</span></li>`;
       })
       .join("");
     element.append(

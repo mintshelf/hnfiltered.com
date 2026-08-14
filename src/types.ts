@@ -1,6 +1,5 @@
 export interface Env {
   FILTER_MODE?: "active" | "shadow";
-  MAX_ANALYSES_PER_RUN?: string;
   OPENAI_API_KEY?: string;
   OPENAI_MODEL?: string;
   VERDICTS: KVNamespace;
@@ -21,27 +20,7 @@ export interface HnItem {
   url?: string;
 }
 
-export const FAILURE_MODES = [
-  "broken_or_inaccessible",
-  "fabricated_or_unsupported",
-  "misleading_title",
-  "nonfunctional_project",
-  "plagiarized_or_copied",
-  "spam_or_bait",
-  "thin_or_no_substance",
-] as const;
-
-export type FailureMode = (typeof FAILURE_MODES)[number];
-
-export interface Assessment {
-  basis: "discussion" | "post";
-  failureModes: FailureMode[];
-  rationale: string;
-  supportingCommentIds: number[];
-  verdict: "filter" | "keep";
-}
-
-export interface StoryForAssessment {
+export interface StoryForReview {
   comments: Array<{ id: number; text: string }>;
   descendants: number;
   domain: string | null;
@@ -53,15 +32,9 @@ export interface StoryForAssessment {
   url: string | null;
 }
 
-export interface StoredVerdict {
-  analyzedAt: string;
-  assessment: Assessment;
-  descendants: number;
-  model: string;
-  promptVersion: number;
-  score: number;
-  storyId: number;
-  title: string;
+export interface SelectedStory {
+  id: number;
+  reason: string;
 }
 
 export interface FilterManifest {
@@ -73,8 +46,8 @@ export interface FilterManifest {
 }
 
 export interface FilteredStorySummary {
-  failureModes: FailureMode[];
   id: number;
   rank?: number;
+  reason?: string;
   title: string;
 }

@@ -1,19 +1,8 @@
-import { buildAssessmentInput, getItems, getTopStories } from "./hn";
-import { assessStory } from "./openai";
-import {
-  isEligible,
-  PROMPT_VERSION,
-  selectFilteredIds,
-  shouldAnalyze,
-} from "./policy";
-import type { Env, FilterManifest, HnItem, StoredVerdict } from "./types";
+import { buildReviewInput, getItems, getTopStories } from "./hn";
+import { selectStories } from "./openai";
+import type { Env, FilterManifest, HnItem, StoryForReview } from "./types";
 
 const MANIFEST_KEY = "manifest:current";
-const VERDICT_TTL_SECONDS = 3 * 24 * 60 * 60;
-
-function verdictKey(storyId: number): string {
-  return `verdict:${storyId}`;
-}
 
 export async function readManifest(env: Env): Promise<FilterManifest> {
   return (
@@ -29,92 +18,45 @@ export async function readManifest(env: Env): Promise<FilterManifest> {
 export async function runAnalysis(env: Env): Promise<FilterManifest> {
   if (!env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
 
-  const model = env.OPENAI_MODEL ?? "gpt-5.6-luna";
-  const maxAnalyses = Math.max(
-    1,
-    Math.min(30, Number(env.MAX_ANALYSES_PER_RUN ?? 30)),
-  );
   const ids = await getTopStories(90);
   const items = await getItems(ids);
   const rankedStories = items
     .map((story, index) => ({ rank: index + 1, story }))
-    .filter((entry): entry is { rank: number; story: HnItem } =>
-      Boolean(entry.story),
+    .filter(
+      (entry): entry is { rank: number; story: HnItem } =>
+        entry.story?.type === "story" &&
+        !entry.story.dead &&
+        !entry.story.deleted &&
+        Boolean(entry.story.title),
     );
 
-  const existingEntries = await Promise.all(
-    rankedStories.map(async ({ story }) => ({
-      story,
-      verdict: await env.VERDICTS.get<StoredVerdict>(
-        verdictKey(story.id),
-        "json",
-      ),
-    })),
-  );
-  const existingById = new Map(
-    existingEntries.map(({ story, verdict }) => [story.id, verdict]),
-  );
-
-  const candidates = rankedStories
-    .filter(({ rank, story }) => isEligible(story, rank))
-    .filter(({ story }) =>
-      shouldAnalyze(story, existingById.get(story.id) ?? null, model),
-    )
-    .slice(0, maxAnalyses);
-
-  for (let index = 0; index < candidates.length; index += 3) {
-    await Promise.all(
-      candidates.slice(index, index + 3).map(async ({ rank, story }) => {
-        try {
-          const input = await buildAssessmentInput(story, rank);
-          const assessment = await assessStory(
-            input,
-            env.OPENAI_API_KEY!,
-            model,
-          );
-          const verdict: StoredVerdict = {
-            analyzedAt: new Date().toISOString(),
-            assessment,
-            descendants: story.descendants ?? 0,
-            model,
-            promptVersion: PROMPT_VERSION,
-            score: story.score ?? 0,
-            storyId: story.id,
-            title: story.title ?? "",
-          };
-          existingById.set(story.id, verdict);
-          await env.VERDICTS.put(
-            verdictKey(story.id),
-            JSON.stringify(verdict),
-            {
-              expirationTtl: VERDICT_TTL_SECONDS,
-            },
-          );
-        } catch (error) {
-          console.error(`Unable to assess story ${story.id}`, error);
-        }
-      }),
+  const inputs: StoryForReview[] = [];
+  for (let index = 0; index < rankedStories.length; index += 10) {
+    inputs.push(
+      ...(await Promise.all(
+        rankedStories
+          .slice(index, index + 10)
+          .map(({ rank, story }) => buildReviewInput(story, rank)),
+      )),
     );
   }
 
-  const predictedIds = selectFilteredIds(rankedStories, existingById);
-
+  const selected = await selectStories(
+    inputs,
+    env.OPENAI_API_KEY,
+    env.OPENAI_MODEL ?? "gpt-5.6-luna",
+  );
+  const selectedById = new Map(selected.map((story) => [story.id, story]));
+  const filteredStories = rankedStories
+    .filter(({ story }) => selectedById.has(story.id))
+    .map(({ rank, story }) => ({
+      id: story.id,
+      rank,
+      reason: selectedById.get(story.id)!.reason,
+      title: story.title ?? "Filtered story",
+    }));
+  const predictedIds = filteredStories.map(({ id }) => id);
   const mode = env.FILTER_MODE === "active" ? "active" : "shadow";
-  const storyById = new Map(
-    rankedStories.map(({ story }) => [story.id, story]),
-  );
-  const rankById = new Map(
-    rankedStories.map(({ rank, story }) => [story.id, rank]),
-  );
-  const filteredStories = predictedIds.map((id) => {
-    const verdict = existingById.get(id);
-    return {
-      failureModes: verdict?.assessment.failureModes ?? [],
-      id,
-      rank: rankById.get(id),
-      title: verdict?.title ?? storyById.get(id)?.title ?? "Filtered story",
-    };
-  });
   const manifest: FilterManifest = {
     activeIds: mode === "active" ? predictedIds : [],
     filteredStories,
