@@ -90,8 +90,20 @@ export async function runAnalysis(env: Env): Promise<FilterManifest> {
   const predictedIds = selectFilteredIds(rankedStories, existingById);
 
   const mode = env.FILTER_MODE === "active" ? "active" : "shadow";
+  const storyById = new Map(
+    rankedStories.map(({ story }) => [story.id, story]),
+  );
+  const filteredStories = predictedIds.map((id) => {
+    const verdict = existingById.get(id);
+    return {
+      failureModes: verdict?.assessment.failureModes ?? [],
+      id,
+      title: verdict?.title ?? storyById.get(id)?.title ?? "Filtered story",
+    };
+  });
   const manifest: FilterManifest = {
     activeIds: mode === "active" ? predictedIds : [],
+    filteredStories,
     generatedAt: new Date().toISOString(),
     mode,
     predictedIds,

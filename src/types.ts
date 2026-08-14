@@ -66,7 +66,14 @@ export interface StoredVerdict {
 
 export interface FilterManifest {
   activeIds: number[];
+  filteredStories?: FilteredStorySummary[];
   generatedAt: string;
   mode: "active" | "shadow";
   predictedIds: number[];
+}
+
+export interface FilteredStorySummary {
+  failureModes: FailureMode[];
+  id: number;
+  title: string;
 }
