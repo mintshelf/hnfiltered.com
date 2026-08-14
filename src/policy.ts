@@ -3,6 +3,7 @@ import type { Assessment, HnItem, StoredVerdict } from "./types";
 export const PROMPT_VERSION = 1;
 export const MIN_DESCENDANTS = 6;
 export const MIN_TOP_LEVEL_THREADS = 2;
+export const MIN_FILTERED_STORIES = 3;
 
 export function isEligible(story: HnItem, rank: number): boolean {
   return (
@@ -63,16 +64,17 @@ export function selectFilteredIds(
 ): number[] {
   const strictMatches = rankedStories
     .filter(({ rank, story }) => {
+      if (rank > 30) return false;
       const verdict = verdicts.get(story.id);
       return verdict ? shouldFilter(story, rank, verdict.assessment) : false;
     })
     .map(({ story }) => story.id);
-  if (strictMatches.length > 0) return strictMatches;
+  if (strictMatches.length >= MIN_FILTERED_STORIES) return strictMatches;
 
   const visibleFallbacks = rankedStories.filter(
     ({ rank }) => rank > 5 && rank <= 30,
   );
-  const assessedFallback = visibleFallbacks
+  const assessedFallbacks = visibleFallbacks
     .map((entry) => ({ ...entry, verdict: verdicts.get(entry.story.id) }))
     .filter((entry): entry is typeof entry & { verdict: StoredVerdict } =>
       Boolean(entry.verdict),
@@ -89,10 +91,18 @@ export function selectFilteredIds(
         );
       };
       return risk(right) - risk(left);
-    })[0];
+    });
 
-  if (assessedFallback) return [assessedFallback.story.id];
+  const selected = new Set(strictMatches);
+  for (const fallback of assessedFallbacks) {
+    if (selected.size >= MIN_FILTERED_STORIES) break;
+    selected.add(fallback.story.id);
+  }
 
-  const leastPopularVisibleStory = visibleFallbacks.at(-1);
-  return leastPopularVisibleStory ? [leastPopularVisibleStory.story.id] : [];
+  for (const fallback of visibleFallbacks.toReversed()) {
+    if (selected.size >= MIN_FILTERED_STORIES) break;
+    selected.add(fallback.story.id);
+  }
+
+  return [...selected];
 }

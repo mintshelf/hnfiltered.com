@@ -53,9 +53,6 @@ class HeadHandler implements HTMLRewriterElementContentHandlers {
   constructor(private readonly hiddenIds: number[]) {}
 
   element(element: Element): void {
-    element.prepend('<base href="https://news.ycombinator.com/">', {
-      html: true,
-    });
     const selectors = this.hiddenIds.length
       ? this.hiddenIds
           .flatMap((id) => {
@@ -79,7 +76,7 @@ class HeadHandler implements HTMLRewriterElementContentHandlers {
         .hnfiltered-popover-brand svg{display:block;flex:none;width:24px;height:24px}
         .hnfiltered-footer{display:grid;grid-template-columns:1fr;gap:6px;margin:8px 16px 0;color:#828282;font-size:8pt;line-height:1.45}
         .hnfiltered-quote{width:100%;text-align:center}
-        .hnfiltered-credit{display:inline-flex;justify-self:end;align-items:center;gap:7px;white-space:nowrap}
+        .hnfiltered-credit{display:inline-flex;justify-self:center;align-items:center;gap:7px;white-space:nowrap}
         .hnfiltered-credit-prefix{color:#000;font-family:Verdana,Geneva,sans-serif;font-size:8pt;font-weight:normal}
         .hnfiltered-brand{display:inline-flex;align-items:center;gap:6px;color:#1a1c19!important;font-family:"Public Sans",system-ui,sans-serif;font-size:11pt;font-weight:650;letter-spacing:-.01em;text-decoration:none!important}
         .hnfiltered-brand svg{display:block;flex:none;width:24px;height:24px}
@@ -156,6 +153,17 @@ class HomeLinkHandler implements HTMLRewriterElementContentHandlers {
   }
 }
 
+class UpstreamUrlHandler implements HTMLRewriterElementContentHandlers {
+  constructor(private readonly attribute: "action" | "href" | "src") {}
+
+  element(element: Element): void {
+    const value = element.getAttribute(this.attribute);
+    if (value) {
+      element.setAttribute(this.attribute, new URL(value, HN_HOME).toString());
+    }
+  }
+}
+
 class NavigationHandler implements HTMLRewriterElementContentHandlers {
   private handled = false;
 
@@ -228,6 +236,9 @@ export async function renderHomepage(
   const transformed = new HTMLRewriter()
     .on("head", new HeadHandler(hiddenIds))
     .on("title", new TitleHandler())
+    .on("a[href], link[href]", new UpstreamUrlHandler("href"))
+    .on("img[src], script[src]", new UpstreamUrlHandler("src"))
+    .on("form[action]", new UpstreamUrlHandler("action"))
     .on("img", new AttributeHandler("alt", ""))
     .on(
       'a[href="https://news.ycombinator.com"] img',
@@ -261,7 +272,7 @@ export async function renderHomepage(
   );
   headers.set(
     "Content-Security-Policy",
-    "default-src 'none'; base-uri https://news.ycombinator.com/; form-action https://news.ycombinator.com/; img-src https://news.ycombinator.com https://account.ycombinator.com data:; style-src 'unsafe-inline' https://news.ycombinator.com; script-src 'sha256-NFq79iTywH79TVgamEHAoPyxAuqJgv7dGmHfZwDHvcU=' 'sha256-Khp8DKeMdzG6r5ov2yC8BEh68ZB7jQsWOc2Z+gSveww=' https://news.ycombinator.com https://static.cloudflareinsights.com; connect-src 'self'; frame-ancestors 'none'",
+    "default-src 'none'; base-uri 'self'; form-action https://news.ycombinator.com https://hn.algolia.com; img-src https://news.ycombinator.com https://account.ycombinator.com data:; style-src 'unsafe-inline' https://news.ycombinator.com; script-src 'sha256-NFq79iTywH79TVgamEHAoPyxAuqJgv7dGmHfZwDHvcU=' 'sha256-Khp8DKeMdzG6r5ov2yC8BEh68ZB7jQsWOc2Z+gSveww=' https://news.ycombinator.com https://static.cloudflareinsights.com; connect-src 'self'; frame-ancestors 'none'",
   );
   headers.set("Content-Language", "en");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");

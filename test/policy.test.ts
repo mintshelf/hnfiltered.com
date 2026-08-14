@@ -76,7 +76,7 @@ describe("filter policy", () => {
     ).toBe(true);
   });
 
-  it("selects the highest-risk visible story when strict filtering finds none", () => {
+  it("selects the highest-risk visible stories when strict filtering finds fewer than three", () => {
     const moderateVerdict: StoredVerdict = {
       analyzedAt: new Date().toISOString(),
       assessment: {
@@ -104,6 +104,7 @@ describe("filter policy", () => {
     const rankedStories = [
       { rank: 9, story: { ...story, id: 200 } },
       { rank: 20, story: { ...story, id: 201 } },
+      { rank: 30, story: { ...story, id: 202 } },
     ];
 
     expect(
@@ -114,15 +115,15 @@ describe("filter policy", () => {
           [201, lowVerdict],
         ]),
       ),
-    ).toEqual([200]);
+    ).toEqual([200, 201, 202]);
   });
 
-  it("still guarantees one visible fallback before assessments exist", () => {
+  it("still guarantees three visible fallbacks before assessments exist", () => {
     const rankedStories = Array.from({ length: 30 }, (_, index) => ({
       rank: index + 1,
       story: { ...story, id: index + 1 },
     }));
 
-    expect(selectFilteredIds(rankedStories, new Map())).toEqual([30]);
+    expect(selectFilteredIds(rankedStories, new Map())).toEqual([30, 29, 28]);
   });
 });
