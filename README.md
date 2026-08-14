@@ -8,7 +8,7 @@ An experiment by [Mint Shelf](https://mintshelf.com).
 
 ## How it works
 
-Every five minutes, the Worker reads the current front page and its top-level comments. `gpt-5.6-luna` scores whether each link looks like a waste of time. A small policy layer protects popular and controversial stories, then stores the result in Workers KV.
+Every five minutes, the Worker reads ranks 6 through 30 and assesses every story with at least one top-level comment. `gpt-5.6-luna` scores whether each link looks like a waste of time. A small policy layer protects popular and controversial stories, then stores the result in Workers KV.
 
 Page requests fetch the real HN homepage and remove the selected rows with `HTMLRewriter`. Model calls only happen in the scheduled job.
 

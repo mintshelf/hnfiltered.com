@@ -69,8 +69,9 @@ describe("filter policy", () => {
 
   it("requires enough discussion before analysis", () => {
     expect(isEligible(story, 6)).toBe(true);
-    expect(isEligible({ ...story, descendants: 5 }, 6)).toBe(false);
-    expect(isEligible({ ...story, kids: [1] }, 6)).toBe(false);
+    expect(isEligible({ ...story, descendants: 1, kids: [1] }, 6)).toBe(true);
+    expect(isEligible({ ...story, descendants: 0 }, 6)).toBe(false);
+    expect(isEligible({ ...story, kids: [] }, 6)).toBe(false);
   });
 
   it("reanalyzes only after material discussion growth", () => {

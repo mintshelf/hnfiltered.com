@@ -32,9 +32,9 @@ export async function runAnalysis(env: Env): Promise<FilterManifest> {
   const model = env.OPENAI_MODEL ?? "gpt-5.6-luna";
   const maxAnalyses = Math.max(
     1,
-    Math.min(20, Number(env.MAX_ANALYSES_PER_RUN ?? 8)),
+    Math.min(25, Number(env.MAX_ANALYSES_PER_RUN ?? 25)),
   );
-  const ids = await getTopStories(60);
+  const ids = await getTopStories(30);
   const items = await getItems(ids);
   const rankedStories = items
     .map((story, index) => ({ rank: index + 1, story }))
