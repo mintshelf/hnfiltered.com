@@ -1,6 +1,6 @@
 import type { Assessment, HnItem, StoredVerdict } from "./types";
 
-export const PROMPT_VERSION = 3;
+export const PROMPT_VERSION = 4;
 export const MIN_DESCENDANTS = 1;
 export const MIN_TOP_LEVEL_THREADS = 1;
 export const POPULAR_SCORE = 50;
@@ -47,9 +47,11 @@ export function shouldFilter(
 
   const probabilityThreshold = 0.3;
   const threadThreshold = rank <= 15 ? 3 : 2;
+  const interestThreshold = (assessment.interestProbability ?? 0) + 0.15;
 
   return (
-    assessment.artifactFailureProbability >= probabilityThreshold &&
+    assessment.artifactFailureProbability >=
+      Math.max(probabilityThreshold, interestThreshold) &&
     assessment.independentEvidenceThreads >= threadThreshold &&
     assessment.supportingCommentIds.length >= threadThreshold &&
     assessment.failureModes.length > 0
@@ -85,6 +87,8 @@ export function selectFilteredIds(
       return Boolean(
         assessment &&
         assessment.artifactFailureProbability >= 0.3 &&
+        assessment.artifactFailureProbability >=
+          (assessment.interestProbability ?? 0) + 0.15 &&
         assessment.failureModes.length > 0 &&
         assessment.independentEvidenceThreads >= 1 &&
         assessment.supportingCommentIds.length >= 1,

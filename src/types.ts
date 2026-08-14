@@ -38,6 +38,8 @@ export interface Assessment {
   controversyProbability: number;
   failureModes: FailureMode[];
   independentEvidenceThreads: number;
+  interestCommentIds: number[];
+  interestProbability: number;
   rationale: string;
   supportingCommentIds: number[];
 }

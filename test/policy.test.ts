@@ -14,6 +14,8 @@ const assessment: Assessment = {
   controversyProbability: 0.2,
   failureModes: ["thin_or_no_substance"],
   independentEvidenceThreads: 3,
+  interestCommentIds: [],
+  interestProbability: 0.1,
   rationale: "Independent comments identify a lack of substance.",
   supportingCommentIds: [1, 2, 3],
 };
@@ -72,6 +74,25 @@ describe("filter policy", () => {
         controversyProbability: 0.7,
       }),
     ).toBe(false);
+  });
+
+  it("requires waste-of-time evidence to outweigh genuine interest", () => {
+    expect(
+      shouldFilter(story, 20, {
+        ...assessment,
+        artifactFailureProbability: 0.6,
+        interestCommentIds: [4, 5, 6],
+        interestProbability: 0.5,
+      }),
+    ).toBe(false);
+    expect(
+      shouldFilter(story, 20, {
+        ...assessment,
+        artifactFailureProbability: 0.65,
+        interestCommentIds: [4, 5, 6],
+        interestProbability: 0.5,
+      }),
+    ).toBe(true);
   });
 
   it("requires enough discussion before analysis", () => {
