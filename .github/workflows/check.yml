@@ -22,4 +22,5 @@ jobs:
           version: 2026.6.12
           cache: true
           experimental: true
+      - run: bun install --frozen-lockfile
       - run: mise run check
