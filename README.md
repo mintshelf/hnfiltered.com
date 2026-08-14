@@ -34,3 +34,7 @@ bun run check
 bunx wrangler secret put OPENAI_API_KEY
 bun run deploy
 ```
+
+## License
+
+[MIT](LICENSE.md), with an optional beerware note.
