@@ -3,7 +3,7 @@ name: Check
 on:
   pull_request:
   push:
-    branches: [next]
+    branches: [main]
 
 concurrency:
   group: check-${{ github.event.pull_request.number || github.ref }}
